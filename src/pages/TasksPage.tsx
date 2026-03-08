@@ -26,6 +26,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/hooks/useActivityLog";
 import { sendStatusEmail } from "@/lib/send-status-email";
+import { notifyTaskAssigned } from "@/lib/email-notifications";
 import { cn } from "@/lib/utils";
 import TaskDetailDrawer from "@/components/TaskDetailDrawer";
 
@@ -150,17 +151,29 @@ const TasksPage = () => {
         .update({ assigned_to: bulkAssignTo || null })
         .in("id", ids);
       if (error) throw error;
+      const assigneeName = teamMembers.find((m) => m.id === bulkAssignTo)?.name || "Unassigned";
       for (const id of ids) {
         const task = tasks.find((t) => t.id === id);
         logActivity({
           entity: "task",
           entityId: id,
           action: "assigned",
-          metadata: {
-            title: task?.task_title,
-            to: teamMembers.find((m) => m.id === bulkAssignTo)?.name || "Unassigned",
-          },
+          metadata: { title: task?.task_title, to: assigneeName },
         });
+      }
+      // Notify assigned member
+      if (bulkAssignTo) {
+        for (const id of ids) {
+          const task = tasks.find((t) => t.id === id);
+          const clientName = (task as any)?.clients?.client_name;
+          notifyTaskAssigned({
+            taskTitle: task?.task_title || "",
+            assignedToId: bulkAssignTo,
+            assignedToName: assigneeName,
+            clientName,
+            deadline: task?.deadline,
+          });
+        }
       }
     },
     onSuccess: () => {

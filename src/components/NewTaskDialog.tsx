@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { notifyTaskAssigned } from "@/lib/email-notifications";
 import {
   Dialog,
   DialogContent,
@@ -85,6 +86,18 @@ const NewTaskDialog = ({ open, onOpenChange, defaultDate }: NewTaskDialogProps) 
     onSuccess: (result) => {
       logActivity({ entity: "task", entityId: result.id, action: "created", metadata: { name: title } });
       toast({ title: "Task created", description: `"${title}" added for ${format(defaultDate, "MMM d, yyyy")}` });
+      // Notify assigned member
+      if (assignedTo) {
+        const member = teamMembers.find((m) => m.id === assignedTo);
+        const client = clients.find((c) => c.id === clientId);
+        notifyTaskAssigned({
+          taskTitle: title,
+          assignedToId: assignedTo,
+          assignedToName: member?.name,
+          clientName: client?.client_name,
+          deadline: defaultDate.toISOString(),
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       resetAndClose();

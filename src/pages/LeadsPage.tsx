@@ -27,6 +27,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/hooks/useActivityLog";
 import { sendStatusEmail } from "@/lib/send-status-email";
+import { notifyLeadAssigned, notifyClientCreated } from "@/lib/email-notifications";
 import NewLeadDrawer from "@/components/NewLeadDrawer";
 import ImportLeadsDialog from "@/components/ImportLeadsDialog";
 import { exportLeadsCsv } from "@/lib/csv-utils";
@@ -168,17 +169,26 @@ const LeadsPage = () => {
         .update({ assigned_to: bulkAssignTo || null })
         .in("id", ids);
       if (error) throw error;
+      const assigneeName = teamMembers.find((m) => m.id === bulkAssignTo)?.name || "Unassigned";
       for (const id of ids) {
         const lead = leads.find((l) => l.id === id);
         logActivity({
           entity: "lead",
           entityId: id,
           action: "assigned",
-          metadata: {
-            name: lead?.name,
-            to: teamMembers.find((m) => m.id === bulkAssignTo)?.name || "Unassigned",
-          },
+          metadata: { name: lead?.name, to: assigneeName },
         });
+      }
+      // Send email to assigned member
+      if (bulkAssignTo) {
+        for (const id of ids) {
+          const lead = leads.find((l) => l.id === id);
+          notifyLeadAssigned({
+            leadName: lead?.name || "",
+            assignedToId: bulkAssignTo,
+            assignedToName: assigneeName,
+          });
+        }
       }
     },
     onSuccess: () => {
