@@ -12,6 +12,7 @@ interface TaskRow {
 
 interface TeamLeaderboardProps {
   tasks: TaskRow[];
+  dateRange?: string;
 }
 
 interface MemberStats {
@@ -31,7 +32,7 @@ const RANK_STYLES = [
   { icon: Medal, color: "text-amber-700", bg: "bg-amber-700/15", ring: "ring-amber-700/20" },
 ];
 
-export function TeamLeaderboard({ tasks }: TeamLeaderboardProps) {
+export function TeamLeaderboard({ tasks, dateRange = "30d" }: TeamLeaderboardProps) {
   const leaderboard = useMemo<MemberStats[]>(() => {
     const map = new Map<string, MemberStats>();
 
@@ -80,7 +81,7 @@ export function TeamLeaderboard({ tasks }: TeamLeaderboardProps) {
           <Trophy className="h-5 w-5 text-primary" />
           <div>
             <h3 className="font-display text-base font-bold text-foreground">Team Leaderboard</h3>
-            <p className="text-xs text-muted-foreground">Task completion rankings</p>
+            <p className="text-xs text-muted-foreground">Task completion rankings ({dateRange})</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5">

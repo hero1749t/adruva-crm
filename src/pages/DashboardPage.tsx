@@ -441,7 +441,7 @@ const DashboardPage = () => {
 
       {/* Team Leaderboard & Live Activity Feed */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <TeamLeaderboard tasks={tasks} />
+        <TeamLeaderboard tasks={rangeTasks} dateRange={dateRange} />
         <LiveActivityFeed />
       </div>
 
