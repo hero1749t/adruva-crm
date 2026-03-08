@@ -15,15 +15,22 @@ import {
 import { useState } from "react";
 import { currentUser } from "@/lib/mock-data";
 
-const navItems = [
+type NavItem = {
+  icon: React.ElementType;
+  label: string;
+  path: string;
+  roles?: string[];
+};
+
+const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Leads", path: "/leads" },
   { icon: UserCheck, label: "Clients", path: "/clients" },
   { icon: ClipboardList, label: "Tasks", path: "/tasks" },
   { icon: Calendar, label: "Calendar", path: "/calendar" },
-  { icon: UsersRound, label: "Team", path: "/team", roles: ["owner"] as const },
-  { icon: Settings, label: "Settings", path: "/settings", roles: ["owner"] as const },
-  { icon: ScrollText, label: "Logs", path: "/logs", roles: ["owner", "admin"] as const },
+  { icon: UsersRound, label: "Team", path: "/team", roles: ["owner"] },
+  { icon: Settings, label: "Settings", path: "/settings", roles: ["owner"] },
+  { icon: ScrollText, label: "Logs", path: "/logs", roles: ["owner", "admin"] },
 ];
 
 export function AppSidebar() {
