@@ -24,6 +24,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { logActivity } from "@/hooks/useActivityLog";
+import { useCustomRoles } from "@/hooks/usePermissions";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const roleBadge: Record<string, string> = {
   owner: "bg-destructive/20 text-destructive",
