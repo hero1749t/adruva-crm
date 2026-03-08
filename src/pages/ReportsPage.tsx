@@ -580,10 +580,14 @@ const ReportsPage = () => {
         )}
       </div>
 
-      {/* Row 4: Lead Funnel + MRR */}
+      {/* Row 4: Lead Funnel + Lead Sources */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <LeadConversionFunnel data={leadFunnelData} />
-        <MrrBreakdownChart data={mrrData} />
+        <LeadSourceChart data={leadSourceData} />
+      </div>
+
+      {/* Row 5: MRR */}
+      <MrrBreakdownChart data={mrrData} />
       </div>
     </div>
   );
