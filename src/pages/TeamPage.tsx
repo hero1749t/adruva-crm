@@ -297,6 +297,7 @@ const TeamPage = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="task_manager">Task Manager</SelectItem>
                     <SelectItem value="team">Team</SelectItem>
                   </SelectContent>
                 </Select>
