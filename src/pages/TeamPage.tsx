@@ -354,6 +354,15 @@ const TeamPage = () => {
                             >
                               Change Role
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => toggleStatus.mutate({ userId: member.id, currentStatus: member.status, memberName: member.name })}
+                            >
+                              {member.status === "active" ? (
+                                <><UserX className="mr-2 h-4 w-4" /> Deactivate</>
+                              ) : (
+                                <><UserCheck className="mr-2 h-4 w-4" /> Reactivate</>
+                              )}
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
