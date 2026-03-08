@@ -28,6 +28,7 @@ const LeadsPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const perPage = 20;
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
