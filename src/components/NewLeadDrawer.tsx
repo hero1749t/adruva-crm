@@ -231,12 +231,12 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
           {/* Assign To */}
           <div className="space-y-1.5">
             <FieldLabel label="Assign To" />
-            <Select value={watch("assigned_to") || ""} onValueChange={(v) => setValue("assigned_to", v)}>
+            <Select value={watch("assigned_to") || "unassigned"} onValueChange={(v) => setValue("assigned_to", v === "unassigned" ? "" : v)}>
               <SelectTrigger className="border-border bg-muted/30">
                 <SelectValue placeholder="Unassigned" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Unassigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
                 {teamMembers.map((m) => (
                   <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                 ))}
