@@ -5,8 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import {
   IndianRupee, TrendingUp, Users, ClipboardList,
-  Loader2, BarChart3, CalendarIcon, X,
+  Loader2, BarChart3, CalendarIcon, X, Download, FileText,
 } from "lucide-react";
+import { exportReportCsv, exportReportPdf, type ReportExportData } from "@/lib/report-export";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -216,6 +217,15 @@ const ReportsPage = () => {
     color: "hsl(214, 32%, 91%)",
   };
 
+  const exportData: ReportExportData = {
+    metrics,
+    monthlyRevenue,
+    invoiceStatusDist,
+    teamPerformance,
+    clientRevenue,
+    dateRange: { start: startDate, end: endDate },
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -231,6 +241,28 @@ const ReportsPage = () => {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Reports</h1>
           <p className="text-sm text-muted-foreground">Revenue analytics, trends & team performance</p>
+        </div>
+
+        {/* Export Buttons */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-border bg-muted/30 text-xs"
+            onClick={() => exportReportCsv(exportData)}
+          >
+            <Download className="h-3.5 w-3.5" />
+            CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-border bg-muted/30 text-xs"
+            onClick={() => exportReportPdf(exportData)}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            PDF
+          </Button>
         </div>
 
         {/* Date Range Filter */}
