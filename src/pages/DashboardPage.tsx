@@ -197,6 +197,72 @@ const DashboardPage = () => {
         </div>
       </div>
 
+      {/* Recent Team Activity */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Activity className="h-5 w-5 text-primary" />
+          <h3 className="font-display text-base font-bold text-foreground">Recent Activity</h3>
+        </div>
+        {recentActivity.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No recent activity</p>
+        ) : (
+          <div className="space-y-1">
+            {recentActivity.map((log) => {
+              const actionIcons: Record<string, React.ElementType> = {
+                member_created: UserPlus,
+                member_deleted: Trash2,
+                member_deactivated: UserX,
+                member_reactivated: UserCheck,
+                role_changed: Shield,
+              };
+              const actionColors: Record<string, string> = {
+                member_created: "text-success",
+                member_deleted: "text-destructive",
+                member_deactivated: "text-warning",
+                member_reactivated: "text-success",
+                role_changed: "text-primary",
+              };
+              const ActionIcon = actionIcons[log.action] || UserCog;
+              const actionColor = actionColors[log.action] || "text-muted-foreground";
+              const meta = (log.metadata as Record<string, string>) || {};
+              const userName = (log.profiles as any)?.name || "Unknown";
+
+              let description = log.action.replace(/_/g, " ");
+              if (meta.member_name) {
+                if (log.action === "role_changed") {
+                  description = `Changed ${meta.member_name}'s role from ${meta.old_role} to ${meta.new_role}`;
+                } else if (log.action === "member_deactivated") {
+                  description = `Deactivated ${meta.member_name}`;
+                } else if (log.action === "member_reactivated") {
+                  description = `Reactivated ${meta.member_name}`;
+                } else if (log.action === "member_created") {
+                  description = `Created team member ${meta.member_name}`;
+                } else if (log.action === "member_deleted") {
+                  description = `Deleted ${meta.member_name}`;
+                }
+              }
+
+              return (
+                <div key={log.id} className="flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/30">
+                  <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted/50 ${actionColor}`}>
+                    <ActionIcon className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-foreground">
+                      <span className="font-medium">{userName}</span>{" "}
+                      <span className="text-muted-foreground">{description}</span>
+                    </p>
+                    <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                      {log.entity} · {log.created_at ? formatDistanceToNow(new Date(log.created_at), { addSuffix: true }) : "—"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {profile?.role === "owner" && (
         <div className="rounded-xl border border-border bg-card p-5">
           <h3 className="mb-4 font-display text-base font-bold text-foreground">Monthly Revenue</h3>
