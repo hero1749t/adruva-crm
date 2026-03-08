@@ -7,12 +7,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   ArrowLeft, Phone, Mail, Building2, Calendar, IndianRupee,
   Check, X, Pencil, Loader2, ExternalLink, Activity,
+  ClipboardList, FileText, MessageSquare, BarChart3, Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { useClientHealthScore } from "@/hooks/useClientHealthScore";
@@ -87,6 +89,19 @@ const ClientDetailPage = () => {
         .select("*, profiles!tasks_assigned_to_fkey(name)")
         .eq("client_id", id!)
         .order("deadline", { ascending: true });
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["client-invoices", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("client_id", id!)
+        .order("due_date", { ascending: false });
       return data || [];
     },
     enabled: !!id,
@@ -217,6 +232,15 @@ const ClientDetailPage = () => {
   const completedTasks = tasks.filter((t) => t.status === "completed").length;
   const totalTasks = tasks.length;
 
+  const invoiceStats = {
+    total: invoices.length,
+    paid: invoices.filter((i) => i.status === "paid").length,
+    pending: invoices.filter((i) => i.status === "sent" || i.status === "draft").length,
+    overdue: invoices.filter((i) => i.status === "overdue").length,
+    totalAmount: invoices.reduce((sum, i) => sum + (Number(i.total_amount) || 0), 0),
+    paidAmount: invoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + (Number(i.total_amount) || 0), 0),
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -245,126 +269,176 @@ const ClientDetailPage = () => {
         )}
       </div>
 
-      {/* Two-panel layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        {/* Left Panel — Client Info */}
-        <div className="space-y-4 lg:col-span-2">
-          {/* Status & Plan Card */}
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-3 font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
-              Status & Plan
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Status</p>
-                <Select
-                  value={client.status || "active"}
-                  onValueChange={(v) => updateClient.mutate({ status: v })}
-                  disabled={!isOwnerOrAdmin}
-                >
-                  <SelectTrigger className="h-9 border-border bg-muted/30 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(statusConfig).map(([key, conf]) => (
-                      <SelectItem key={key} value={key}>{conf.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {/* Tabbed Layout */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+          <TabsTrigger value="overview" className="gap-1.5 text-xs">
+            <Settings2 className="h-3.5 w-3.5" /> Overview
+          </TabsTrigger>
+          <TabsTrigger value="tasks" className="gap-1.5 text-xs">
+            <ClipboardList className="h-3.5 w-3.5" /> Tasks
+            <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px]">{totalTasks}</span>
+          </TabsTrigger>
+          <TabsTrigger value="invoices" className="gap-1.5 text-xs">
+            <FileText className="h-3.5 w-3.5" /> Invoices
+            <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px]">{invoices.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="communication" className="gap-1.5 text-xs">
+            <MessageSquare className="h-3.5 w-3.5" /> Communication
+          </TabsTrigger>
+          <TabsTrigger value="insights" className="gap-1.5 text-xs">
+            <BarChart3 className="h-3.5 w-3.5" /> Insights
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+            {/* Left: Client Info */}
+            <div className="space-y-4 lg:col-span-2">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h2 className="mb-3 font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
+                  Status & Plan
+                </h2>
+                <div className="space-y-3">
+                  <div>
+                    <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Status</p>
+                    <Select
+                      value={client.status || "active"}
+                      onValueChange={(v) => updateClient.mutate({ status: v })}
+                      disabled={!isOwnerOrAdmin}
+                    >
+                      <SelectTrigger className="h-9 border-border bg-muted/30 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(statusConfig).map(([key, conf]) => (
+                          <SelectItem key={key} value={key}>{conf.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Plan</p>
+                    <Select
+                      value={client.plan || ""}
+                      onValueChange={(v) => updateClient.mutate({ plan: v })}
+                      disabled={!isOwnerOrAdmin}
+                    >
+                      <SelectTrigger className="h-9 border-border bg-muted/30 text-sm capitalize"><SelectValue placeholder="Select plan" /></SelectTrigger>
+                      <SelectContent>
+                        {planOptions.map((p) => (
+                          <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Billing Status</p>
+                    <Select
+                      value={client.billing_status || "due"}
+                      onValueChange={(v) => updateClient.mutate({ billing_status: v })}
+                      disabled={!isOwnerOrAdmin}
+                    >
+                      <SelectTrigger className="h-9 border-border bg-muted/30 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(billingConfig).map(([key, conf]) => (
+                          <SelectItem key={key} value={key}>{conf.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Account Manager</p>
+                    <Select
+                      value={client.assigned_manager || "unassigned"}
+                      onValueChange={(v) => updateClient.mutate({ assigned_manager: v === "unassigned" ? null : v })}
+                      disabled={!isOwnerOrAdmin}
+                    >
+                      <SelectTrigger className="h-9 border-border bg-muted/30 text-sm"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {teamMembers.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Plan</p>
-                <Select
-                  value={client.plan || ""}
-                  onValueChange={(v) => updateClient.mutate({ plan: v })}
-                  disabled={!isOwnerOrAdmin}
-                >
-                  <SelectTrigger className="h-9 border-border bg-muted/30 text-sm capitalize">
-                    <SelectValue placeholder="Select plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {planOptions.map((p) => (
-                      <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Billing Status</p>
-                <Select
-                  value={client.billing_status || "due"}
-                  onValueChange={(v) => updateClient.mutate({ billing_status: v })}
-                  disabled={!isOwnerOrAdmin}
-                >
-                  <SelectTrigger className="h-9 border-border bg-muted/30 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(billingConfig).map(([key, conf]) => (
-                      <SelectItem key={key} value={key}>{conf.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Account Manager</p>
-                <Select
-                  value={client.assigned_manager || "unassigned"}
-                  onValueChange={(v) => updateClient.mutate({ assigned_manager: v === "unassigned" ? null : v })}
-                  disabled={!isOwnerOrAdmin}
-                >
-                  <SelectTrigger className="h-9 border-border bg-muted/30 text-sm">
-                    <SelectValue placeholder="Unassigned" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {teamMembers.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h2 className="mb-2 font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
+                  Contact Information
+                </h2>
+                <div className="space-y-0.5">
+                  <InfoRow icon={Phone} label="Phone" field="phone" value={client.phone} />
+                  <InfoRow icon={Mail} label="Email" field="email" value={client.email} />
+                  <InfoRow icon={Building2} label="Company" field="company_name" value={client.company_name} />
+                  <InfoRow icon={IndianRupee} label="Monthly Payment" field="monthly_payment" value={client.monthly_payment?.toString() || null} />
+                  <InfoRow icon={Calendar} label="Start Date" field="start_date" value={client.start_date} />
+                  <InfoRow icon={Calendar} label="Contract End" field="contract_end_date" value={client.contract_end_date} />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Contact Info Card */}
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-2 font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
-              Contact Information
-            </h2>
-            <div className="space-y-0.5">
-              <InfoRow icon={Phone} label="Phone" field="phone" value={client.phone} />
-              <InfoRow icon={Mail} label="Email" field="email" value={client.email} />
-              <InfoRow icon={Building2} label="Company" field="company_name" value={client.company_name} />
-              <InfoRow icon={IndianRupee} label="Monthly Payment" field="monthly_payment" value={client.monthly_payment?.toString() || null} />
-              <InfoRow icon={Calendar} label="Start Date" field="start_date" value={client.start_date} />
-              <InfoRow icon={Calendar} label="Contract End" field="contract_end_date" value={client.contract_end_date} />
+            {/* Right: Summary Cards */}
+            <div className="space-y-4 lg:col-span-3">
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-xl border border-border bg-card p-3 text-center">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Tasks</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-foreground">{completedTasks}/{totalTasks}</p>
+                  <p className="text-[10px] text-muted-foreground">completed</p>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-3 text-center">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Invoices</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-foreground">{invoiceStats.paid}/{invoiceStats.total}</p>
+                  <p className="text-[10px] text-muted-foreground">paid</p>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-3 text-center">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Revenue</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-success">₹{(invoiceStats.paidAmount / 1000).toFixed(0)}K</p>
+                  <p className="text-[10px] text-muted-foreground">collected</p>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-3 text-center">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Overdue</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-destructive">{invoiceStats.overdue}</p>
+                  <p className="text-[10px] text-muted-foreground">invoices</p>
+                </div>
+              </div>
+
+              {/* Onboarding */}
+              <OnboardingChecklist clientId={id!} clientName={client.client_name} />
+
+              {/* Task Progress */}
+              {totalTasks > 0 && (
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <h2 className="mb-3 font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
+                    Task Progress
+                  </h2>
+                  <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-success transition-all"
+                      style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {completedTasks} of {totalTasks} tasks completed ({totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%)
+                  </p>
+                </div>
+              )}
             </div>
           </div>
+        </TabsContent>
 
-          {/* Onboarding Checklist */}
-          <OnboardingChecklist clientId={id!} clientName={client.client_name} />
-
-          {/* Communication Log */}
-          <CommunicationLog entityType="client" entityId={id!} />
-        </div>
-
-        {/* Right Panel — Tasks */}
-        <div className="space-y-4 lg:col-span-3">
-          {/* AI Insights */}
-          <ClientAIInsights clientId={id!} />
-
+        {/* Tasks Tab */}
+        <TabsContent value="tasks" className="space-y-4">
           <div className="rounded-xl border border-border bg-card p-4">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
-                Tasks
+                Tasks ({completedTasks}/{totalTasks} completed)
               </h2>
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {completedTasks}/{totalTasks} completed
-              </span>
             </div>
 
-            {/* Progress bar */}
             {totalTasks > 0 && (
               <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div
@@ -403,16 +477,13 @@ const ClientDetailPage = () => {
                             <span className={`font-mono text-[9px] font-medium uppercase tracking-wider ${pConf.color}`}>
                               {pConf.label}
                             </span>
-                            <span className="font-mono text-[9px] text-muted-foreground">
-                              {assignee}
-                            </span>
+                            <span className="font-mono text-[9px] text-muted-foreground">{assignee}</span>
                             {task.deadline && (
                               <span className={`font-mono text-[9px] ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
                                 Due {new Date(task.deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                               </span>
                             )}
                           </div>
-                          {/* Links row */}
                           {(task.website_link || task.meta_link || task.gmb_link) && (
                             <div className="mt-1.5 flex gap-2">
                               {task.website_link && (
@@ -433,7 +504,6 @@ const ClientDetailPage = () => {
                             </div>
                           )}
                         </div>
-                        {/* Quick status change */}
                         {isOwnerOrAdmin && task.status !== "completed" && (
                           <Button
                             variant="ghost"
@@ -461,8 +531,83 @@ const ClientDetailPage = () => {
               </div>
             )}
           </div>
-        </div>
-      </div>
+        </TabsContent>
+
+        {/* Invoices Tab */}
+        <TabsContent value="invoices" className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-border bg-card p-3 text-center">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Total</p>
+              <p className="mt-1 font-display text-xl font-bold text-foreground">₹{invoiceStats.totalAmount.toLocaleString()}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-3 text-center">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Collected</p>
+              <p className="mt-1 font-display text-xl font-bold text-success">₹{invoiceStats.paidAmount.toLocaleString()}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-3 text-center">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Pending</p>
+              <p className="mt-1 font-display text-xl font-bold text-warning">{invoiceStats.pending}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-3 text-center">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Overdue</p>
+              <p className="mt-1 font-display text-xl font-bold text-destructive">{invoiceStats.overdue}</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="grid grid-cols-[1fr_100px_100px_100px_80px] gap-2 border-b border-border bg-surface px-4 py-2.5">
+              <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Invoice</span>
+              <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Amount</span>
+              <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Due Date</span>
+              <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Status</span>
+              <span />
+            </div>
+            {invoices.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">No invoices yet</div>
+            ) : (
+              invoices.map((inv) => {
+                const statusColors: Record<string, string> = {
+                  paid: "bg-success/20 text-success",
+                  sent: "bg-primary/20 text-primary",
+                  draft: "bg-muted text-muted-foreground",
+                  overdue: "bg-destructive/20 text-destructive",
+                  cancelled: "bg-muted text-muted-foreground",
+                };
+                return (
+                  <div key={inv.id} className="grid grid-cols-[1fr_100px_100px_100px_80px] items-center gap-2 border-b border-border/50 px-4 py-2.5">
+                    <span className="text-sm font-medium text-foreground">{inv.invoice_number}</span>
+                    <span className="text-sm text-foreground">₹{Number(inv.total_amount).toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(inv.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    </span>
+                    <span className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider ${statusColors[inv.status] || ""}`}>
+                      {inv.status}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => navigate(`/invoices`)}
+                    >
+                      View
+                    </Button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Communication Tab */}
+        <TabsContent value="communication">
+          <CommunicationLog entityType="client" entityId={id!} />
+        </TabsContent>
+
+        {/* Insights Tab */}
+        <TabsContent value="insights">
+          <ClientAIInsights clientId={id!} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
