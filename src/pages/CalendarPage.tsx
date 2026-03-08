@@ -31,6 +31,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import NewTaskDialog from "@/components/NewTaskDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 const priorityConfig: Record<string, { dot: string; label: string }> = {
   urgent: { dot: "bg-destructive", label: "Urgent" },
