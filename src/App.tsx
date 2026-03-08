@@ -17,7 +17,8 @@ import CalendarPage from "@/pages/CalendarPage";
 import TeamPage from "@/pages/TeamPage";
 import SettingsPage from "@/pages/SettingsPage";
 import LogsPage from "@/pages/LogsPage";
-import InvoicesPage from "@/pages/InvoicesPage";
+import PaymentsPage from "@/pages/PaymentsPage";
+import IntegrationsPage from "@/pages/IntegrationsPage";
 import ReportsPage from "@/pages/ReportsPage";
 
 import NotFound from "@/pages/NotFound";
@@ -43,11 +44,13 @@ const App = () => (
                 <Route path="clients/:id" element={<ClientDetailPage />} />
                 <Route path="tasks" element={<TasksPage />} />
                 <Route path="calendar" element={<CalendarPage />} />
+                <Route path="payments" element={<PaymentsPage />} />
+                <Route path="integrations" element={<IntegrationsPage />} />
                 <Route path="team" element={<TeamPage />} />
                 <Route path="settings" element={<SettingsPage />} />
-                <Route path="invoices" element={<InvoicesPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="roles" element={<Navigate to="/team" replace />} />
+                <Route path="invoices" element={<Navigate to="/payments" replace />} />
                 <Route path="logs" element={<LogsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
