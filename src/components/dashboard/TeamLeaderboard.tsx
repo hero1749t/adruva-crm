@@ -99,7 +99,8 @@ export function TeamLeaderboard({ tasks, dateRange = "30d" }: TeamLeaderboardPro
           return (
             <div
               key={member.id}
-              className="group flex items-center gap-3 rounded-lg border border-border/50 bg-muted/10 px-4 py-3 transition-all hover:bg-muted/20 hover:border-border animate-fade-in"
+              onClick={() => navigate(`/tasks?assigned_to=${member.id}`)}
+              className="group flex items-center gap-3 rounded-lg border border-border/50 bg-muted/10 px-4 py-3 transition-all hover:bg-muted/20 hover:border-border animate-fade-in cursor-pointer"
               style={{ animationDelay: `${idx * 60}ms` }}
             >
               {/* Rank */}
