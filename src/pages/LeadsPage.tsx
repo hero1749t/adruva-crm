@@ -63,7 +63,7 @@ const LeadsPage = () => {
   const isOwner = profile?.role === "owner";
 
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["leads", statusFilter, search, assignedFilter],
+    queryKey: ["leads", statusFilter, search, assignedFilter, dateFilter],
     queryFn: async () => {
       let query = supabase
         .from("leads")
@@ -83,6 +83,32 @@ const LeadsPage = () => {
       }
       if (search) {
         query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%,company_name.ilike.%${search}%`);
+      }
+
+      if (dateFilter !== "all") {
+        const now = new Date();
+        let startDate: string;
+        let endDate: string | undefined;
+
+        if (dateFilter === "today") {
+          startDate = now.toISOString().split("T")[0];
+        } else if (dateFilter === "yesterday") {
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          startDate = yesterday.toISOString().split("T")[0];
+          endDate = now.toISOString().split("T")[0];
+        } else if (dateFilter === "this_month") {
+          startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+        } else {
+          startDate = "";
+        }
+
+        if (startDate) {
+          query = query.gte("created_at", startDate);
+          if (endDate) {
+            query = query.lt("created_at", endDate);
+          }
+        }
       }
 
       const { data } = await query;
