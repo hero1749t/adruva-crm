@@ -439,8 +439,11 @@ const DashboardPage = () => {
         </ResponsiveContainer>
       </div>
 
-      {/* Live Activity Feed */}
-      <LiveActivityFeed />
+      {/* Team Leaderboard & Live Activity Feed */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <TeamLeaderboard tasks={tasks} />
+        <LiveActivityFeed />
+      </div>
 
       {/* Revenue Chart (owner only) */}
       {profile?.role === "owner" && (
