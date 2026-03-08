@@ -22,6 +22,7 @@ const ClientsPage = () => {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
   const [page, setPage] = useState(1);
+  const [healthFilter, setHealthFilter] = useState<string>("all");
   const perPage = 25;
   const navigate = useNavigate();
   const { profile } = useAuth();
