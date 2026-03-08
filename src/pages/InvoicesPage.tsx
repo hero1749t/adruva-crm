@@ -56,8 +56,7 @@ const InvoicesPage = () => {
         .select("*, clients!invoices_client_id_fkey(client_name, company_name)")
         .order("created_at", { ascending: false });
       if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter as "draft" | "sent" | "paid" | "overdue" | "cancelled");
-      }
+        query = query.eq("status", statusFilter as any);
       }
       const { data, error } = await query;
       if (error) throw error;
