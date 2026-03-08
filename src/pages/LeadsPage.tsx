@@ -120,6 +120,30 @@ const LeadsPage = () => {
   const totalCount = data?.total || 0;
   const totalPages = Math.ceil(totalCount / perPage);
 
+  // Kanban: fetch all leads (no pagination)
+  const { data: kanbanData, isLoading: kanbanLoading } = useQuery({
+    queryKey: ["leads-kanban", statusFilter, debouncedSearch, assignedFilter, dateFilter],
+    enabled: viewMode === "kanban",
+    queryFn: async () => {
+      let query = supabase
+        .from("leads")
+        .select("*, profiles!leads_assigned_to_fkey(name)")
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: false });
+
+      if (statusFilter !== "all") query = query.eq("status", statusFilter as any);
+      if (assignedFilter !== "all") {
+        if (assignedFilter === "unassigned") query = query.is("assigned_to", null);
+        else query = query.eq("assigned_to", assignedFilter);
+      }
+      if (debouncedSearch) {
+        query = query.or(`name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,company_name.ilike.%${debouncedSearch}%`);
+      }
+      const { data } = await query;
+      return data || [];
+    },
+  });
+
   const { data: teamMembers = [] } = useQuery({
     queryKey: ["team-members"],
     queryFn: async () => {
