@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.deadline-reminder]
 verify_jwt = false
+
+[functions.client-ai-insights]
+verify_jwt = false
