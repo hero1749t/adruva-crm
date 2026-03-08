@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Plus, Download, UserPlus, CheckCircle2, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Download, UserPlus, CheckCircle2, X, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -232,6 +232,20 @@ const TasksPage = () => {
       )}
 
       <div className="flex flex-wrap items-center gap-3">
+        {profile?.id && (
+          <Button
+            variant={assignedFilter === profile.id ? "default" : "outline"}
+            size="sm"
+            className="h-9 gap-2"
+            onClick={() => {
+              const next = assignedFilter === profile.id ? "all" : profile.id;
+              setAssignedFilter(next);
+              setPage(1);
+            }}
+          >
+            <User className="h-4 w-4" /> My Tasks
+          </Button>
+        )}
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
