@@ -111,7 +111,7 @@ const TeamPage = () => {
   });
 
   const deleteMember = useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async ({ userId, memberName }: { userId: string; memberName: string }) => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
@@ -130,12 +130,13 @@ const TeamPage = () => {
 
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to delete user");
-      return result;
+      return { ...result, memberName, userId };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["team"] });
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       toast({ title: "Team member deleted" });
+      logActivity({ entity: "team", entityId: data.userId, action: "member_deleted", metadata: { member_name: data.memberName } });
     },
     onError: (err: Error) => {
       toast({ title: "Failed to delete user", description: err.message, variant: "destructive" });
@@ -143,18 +144,20 @@ const TeamPage = () => {
   });
 
   const updateRole = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: string }) => {
+    mutationFn: async ({ userId, newRole, memberName, oldRole }: { userId: string; newRole: string; memberName: string; oldRole: string }) => {
       const { error } = await supabase
         .from("profiles")
         .update({ role: newRole as any })
         .eq("id", userId);
       if (error) throw error;
+      return { userId, newRole, memberName, oldRole };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["team"] });
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       toast({ title: "Role updated" });
       setRoleEditId(null);
+      logActivity({ entity: "team", entityId: data.userId, action: "role_changed", metadata: { member_name: data.memberName, old_role: data.oldRole, new_role: data.newRole } });
     },
     onError: (err: Error) => {
       toast({ title: "Failed to update role", description: err.message, variant: "destructive" });
@@ -289,7 +292,7 @@ const TeamPage = () => {
                           value={roleEditValue}
                           onValueChange={(v) => {
                             setRoleEditValue(v);
-                            updateRole.mutate({ userId: member.id, newRole: v });
+                            updateRole.mutate({ userId: member.id, newRole: v, memberName: member.name, oldRole: member.role });
                           }}
                         >
                           <SelectTrigger className="h-8 w-28 border-border bg-muted/30 text-xs">
@@ -351,7 +354,7 @@ const TeamPage = () => {
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    onClick={() => deleteMember.mutate(member.id)}
+                                    onClick={() => deleteMember.mutate({ userId: member.id, memberName: member.name })}
                                     disabled={deleteMember.isPending}
                                   >
                                     {deleteMember.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
