@@ -232,6 +232,7 @@ const CronJobsMonitor = () => {
         <ul className="mt-2 list-inside list-disc space-y-1">
           <li><strong>check-overdue</strong> — Marks tasks past deadline as overdue (hourly)</li>
           <li><strong>deadline-reminder</strong> — Sends email & in-app notifications for tasks due today/tomorrow (daily 8 AM IST)</li>
+          <li><strong>create-recurring-tasks</strong> — Auto-creates scheduled tasks for active clients (daily 8 AM IST)</li>
           <li>Status auto-refreshes every 60 seconds</li>
         </ul>
       </div>
