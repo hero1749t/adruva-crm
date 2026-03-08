@@ -22,6 +22,7 @@ import HealthScoreBadge from "@/components/HealthScoreBadge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { CommunicationLog } from "@/components/CommunicationLog";
 import { ClientAIInsights } from "@/components/ClientAIInsights";
+import { ApplyServiceTemplateDialog } from "@/components/ApplyServiceTemplateDialog";
 
 type ClientStatus = Database["public"]["Enums"]["client_status"];
 type BillingStatus = Database["public"]["Enums"]["billing_status"];
