@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Plus, Download, UserPlus, CheckCircle2, X } from "lucide-react";
+import { Search, Plus, Download, UserPlus, CheckCircle2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +47,8 @@ const TasksPage = () => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [assignedFilter, setAssignedFilter] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const perPage = 20;
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [bulkAssignTo, setBulkAssignTo] = useState("");
@@ -91,7 +93,9 @@ const TasksPage = () => {
     },
   });
 
-  const allSelected = tasks.length > 0 && tasks.every((t) => selected.has(t.id));
+  const totalPages = Math.ceil(tasks.length / perPage);
+  const paged = tasks.slice((page - 1) * perPage, page * perPage);
+  const allSelected = paged.length > 0 && paged.every((t) => selected.has(t.id));
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -106,7 +110,7 @@ const TasksPage = () => {
     if (allSelected) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(tasks.map((t) => t.id)));
+      setSelected(new Set(paged.map((t) => t.id)));
     }
   };
 
@@ -233,11 +237,11 @@ const TasksPage = () => {
           <Input
             placeholder="Search tasks..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="h-9 border-border bg-muted/30 pl-9 text-sm"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
           <SelectTrigger className="h-9 w-36 border-border bg-muted/30 text-sm">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -248,7 +252,7 @@ const TasksPage = () => {
             ))}
           </SelectContent>
         </Select>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+        <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setPage(1); }}>
           <SelectTrigger className="h-9 w-36 border-border bg-muted/30 text-sm">
             <SelectValue placeholder="Priority" />
           </SelectTrigger>
@@ -259,7 +263,7 @@ const TasksPage = () => {
             ))}
           </SelectContent>
         </Select>
-        <Select value={assignedFilter} onValueChange={setAssignedFilter}>
+        <Select value={assignedFilter} onValueChange={(v) => { setAssignedFilter(v); setPage(1); }}>
           <SelectTrigger className="h-9 w-44 border-border bg-muted/30 text-sm">
             <SelectValue placeholder="All Assigned" />
           </SelectTrigger>
@@ -308,7 +312,7 @@ const TasksPage = () => {
                 <td colSpan={isOwnerOrAdmin ? 7 : 6} className="px-4 py-12 text-center text-muted-foreground">No tasks found</td>
               </tr>
             ) : (
-              tasks.map((task) => {
+              paged.map((task) => {
                 const priorityConf = taskPriorityConfig[task.priority || "medium"];
                 const statusConf = taskStatusConfig[task.status || "pending"];
                 const isOverdue = task.status === "overdue";
@@ -354,6 +358,20 @@ const TasksPage = () => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Bulk Assign Dialog */}
       <AlertDialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
