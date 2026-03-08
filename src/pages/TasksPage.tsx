@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Plus, Download } from "lucide-react";
+import { Search, Plus, Download, UserPlus, CheckCircle2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,9 +9,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { logActivity } from "@/hooks/useActivityLog";
 import { cn } from "@/lib/utils";
 
 const taskPriorityConfig: Record<string, { label: string; color: string }> = {
@@ -32,7 +45,13 @@ const TasksPage = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [bulkAssignTo, setBulkAssignTo] = useState("");
   const { profile } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
   const { data: tasks = [], isLoading } = useQuery({
@@ -49,6 +68,101 @@ const TasksPage = () => {
 
       const { data } = await query;
       return data || [];
+    },
+  });
+
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["team-members"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, name, role")
+        .eq("status", "active")
+        .order("name");
+      return data || [];
+    },
+  });
+
+  const allSelected = tasks.length > 0 && tasks.every((t) => selected.has(t.id));
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(tasks.map((t) => t.id)));
+    }
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkAssign = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selected);
+      const { error } = await supabase
+        .from("tasks")
+        .update({ assigned_to: bulkAssignTo || null })
+        .in("id", ids);
+      if (error) throw error;
+      for (const id of ids) {
+        const task = tasks.find((t) => t.id === id);
+        logActivity({
+          entity: "task",
+          entityId: id,
+          action: "assigned",
+          metadata: {
+            title: task?.task_title,
+            to: teamMembers.find((m) => m.id === bulkAssignTo)?.name || "Unassigned",
+          },
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast({ title: `${selected.size} task(s) reassigned` });
+      clearSelection();
+      setAssignDialogOpen(false);
+      setBulkAssignTo("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Assign failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const bulkComplete = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selected);
+      const { error } = await supabase
+        .from("tasks")
+        .update({ status: "completed" as any, completed_at: new Date().toISOString() })
+        .in("id", ids);
+      if (error) throw error;
+      for (const id of ids) {
+        const task = tasks.find((t) => t.id === id);
+        logActivity({
+          entity: "task",
+          entityId: id,
+          action: "completed",
+          metadata: { title: task?.task_title },
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast({ title: `${selected.size} task(s) marked as completed` });
+      clearSelection();
+      setCompleteDialogOpen(false);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Complete failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -70,6 +184,40 @@ const TasksPage = () => {
           </div>
         )}
       </div>
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 animate-in fade-in slide-in-from-top-2">
+          <span className="text-sm font-medium text-foreground">
+            {selected.size} task{selected.size !== 1 ? "s" : ""} selected
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            {isOwnerOrAdmin && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setCompleteDialogOpen(true)}
+                >
+                  <CheckCircle2 className="h-4 w-4" /> Complete
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setAssignDialogOpen(true)}
+                >
+                  <UserPlus className="h-4 w-4" /> Assign
+                </Button>
+              </>
+            )}
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-64">
@@ -109,6 +257,15 @@ const TasksPage = () => {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface">
+              {isOwnerOrAdmin && (
+                <th className="w-10 px-3 py-3">
+                  <Checkbox
+                    checked={allSelected && tasks.length > 0}
+                    onCheckedChange={toggleAll}
+                    aria-label="Select all"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Task</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Client</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Priority</th>
@@ -121,14 +278,14 @@ const TasksPage = () => {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-border/50">
-                  {Array.from({ length: 6 }).map((_, j) => (
+                  {Array.from({ length: isOwnerOrAdmin ? 7 : 6 }).map((_, j) => (
                     <td key={j} className="px-4 py-3"><div className="h-4 w-24 animate-pulse rounded bg-muted" /></td>
                   ))}
                 </tr>
               ))
             ) : tasks.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No tasks found</td>
+                <td colSpan={isOwnerOrAdmin ? 7 : 6} className="px-4 py-12 text-center text-muted-foreground">No tasks found</td>
               </tr>
             ) : (
               tasks.map((task) => {
@@ -137,14 +294,25 @@ const TasksPage = () => {
                 const isOverdue = task.status === "overdue";
                 const clientName = (task as any).clients?.client_name || "—";
                 const assignedName = (task as any).profiles?.name || "Unassigned";
+                const isSelected = selected.has(task.id);
                 return (
                   <tr
                     key={task.id}
                     className={cn(
-                      "border-b border-border/50 transition-colors hover:bg-primary/[0.03] cursor-pointer",
-                      isOverdue && "border-l-2 border-l-destructive"
+                      "border-b border-border/50 transition-colors cursor-pointer",
+                      isOverdue && "border-l-2 border-l-destructive",
+                      isSelected ? "bg-primary/[0.06]" : "hover:bg-primary/[0.03]"
                     )}
                   >
+                    {isOwnerOrAdmin && (
+                      <td className="w-10 px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(task.id)}
+                          aria-label={`Select ${task.task_title}`}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3 font-medium text-foreground">{task.task_title}</td>
                     <td className="px-4 py-3 text-muted-foreground">{clientName}</td>
                     <td className="px-4 py-3">
@@ -166,6 +334,60 @@ const TasksPage = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Bulk Assign Dialog */}
+      <AlertDialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Assign {selected.size} task{selected.size !== 1 ? "s" : ""}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select a team member to assign the selected tasks to.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Select value={bulkAssignTo} onValueChange={setBulkAssignTo}>
+            <SelectTrigger className="w-full border-border">
+              <SelectValue placeholder="Select team member" />
+            </SelectTrigger>
+            <SelectContent>
+              {teamMembers.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.name} ({m.role})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBulkAssignTo("")}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!bulkAssignTo || bulkAssign.isPending}
+              onClick={(e) => { e.preventDefault(); bulkAssign.mutate(); }}
+            >
+              {bulkAssign.isPending ? "Assigning..." : "Assign"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Complete Dialog */}
+      <AlertDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete {selected.size} task{selected.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark the selected tasks as completed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkComplete.isPending}
+              onClick={(e) => { e.preventDefault(); bulkComplete.mutate(); }}
+            >
+              {bulkComplete.isPending ? "Completing..." : "Mark Complete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
