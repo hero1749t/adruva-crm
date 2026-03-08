@@ -248,6 +248,59 @@ const DashboardPage = () => {
         </div>
       </div>
 
+      {/* Conversion Funnel */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <TrendingDown className="h-5 w-5 text-primary" />
+          <div>
+            <h3 className="font-display text-base font-bold text-foreground">Pipeline Conversion Funnel</h3>
+            <p className="text-xs text-muted-foreground">Stage-to-stage progression from all {totalLeads} leads</p>
+          </div>
+        </div>
+        {totalLeads === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">No leads yet to show conversion data</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {conversionFunnelData.map((stage, i) => {
+              const pct = totalLeads > 0 ? (stage.value / totalLeads) * 100 : 0;
+              const prevPct = i > 0 && conversionFunnelData[i - 1].value > 0
+                ? ((stage.value / conversionFunnelData[i - 1].value) * 100).toFixed(0)
+                : null;
+              return (
+                <div key={stage.name} className="flex items-center gap-3">
+                  <span className="w-28 shrink-0 text-right text-xs font-medium text-muted-foreground">
+                    {stage.name}
+                  </span>
+                  <div className="relative flex-1 h-9 rounded-lg bg-muted/30 overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-lg transition-all duration-700 ease-out"
+                      style={{
+                        width: `${Math.max(pct, 2)}%`,
+                        backgroundColor: stage.fill,
+                        opacity: 0.85,
+                      }}
+                    />
+                    <div className="relative z-10 flex h-full items-center justify-between px-3">
+                      <span className="text-xs font-bold text-foreground drop-shadow-sm">
+                        {stage.value} lead{stage.value !== 1 ? "s" : ""}
+                      </span>
+                      <span className="text-[10px] font-mono font-medium text-foreground/80 drop-shadow-sm">
+                        {stage.rate}
+                        {prevPct && (
+                          <span className="ml-1.5 text-muted-foreground">
+                            ({prevPct}% from prev)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Recent Team Activity */}
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="mb-4 flex items-center gap-2">
