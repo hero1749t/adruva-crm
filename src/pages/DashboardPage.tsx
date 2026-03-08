@@ -7,6 +7,7 @@ import {
   ClipboardList,
   AlertTriangle,
   DollarSign,
+  ChevronRight,
   Activity,
   UserX,
   UserCog,
