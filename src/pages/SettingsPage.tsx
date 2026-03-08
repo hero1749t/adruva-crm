@@ -42,6 +42,7 @@ import { OnboardingTemplatesSection } from "@/components/OnboardingChecklist";
 import { WeeklyReportPreviewButton } from "@/components/WeeklyReportPreview";
 import { IntegrationsSettings } from "@/components/settings/IntegrationsSettings";
 import { ServiceTemplatesSettings } from "@/components/settings/ServiceTemplatesSettings";
+import { AutomationEngineSettings } from "@/components/settings/AutomationEngineSettings";
 
 type TaskPriority = Database["public"]["Enums"]["task_priority"];
 
