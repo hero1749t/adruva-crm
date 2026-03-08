@@ -14,6 +14,11 @@ import {
   CalendarClock,
   Clock,
   AlertTriangle,
+  RefreshCw,
+  Activity,
+  CheckCircle2,
+  XCircle,
+  Timer,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -49,6 +54,189 @@ const priorityOptions: { value: TaskPriority; label: string; color: string }[] =
   { value: "medium", label: "Medium", color: "bg-primary" },
   { value: "low", label: "Low", color: "bg-muted-foreground" },
 ];
+
+// Helper to extract function name from cron command URL
+const extractFunctionName = (command: string): string => {
+  const match = command.match(/functions\/v1\/([a-z0-9-]+)/);
+  return match ? match[1] : "unknown";
+};
+
+// Friendly schedule descriptions
+const describeSchedule = (schedule: string): string => {
+  const map: Record<string, string> = {
+    "0 * * * *": "Every hour",
+    "*/30 * * * *": "Every 30 minutes",
+    "30 2 * * *": "Daily at 8:00 AM IST",
+    "0 7 * * *": "Daily at 12:30 PM IST",
+    "* * * * *": "Every minute",
+  };
+  return map[schedule] || schedule;
+};
+
+const formatTime = (iso: string): string => {
+  const d = new Date(iso);
+  return d.toLocaleString("en-IN", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+};
+
+interface CronJob {
+  jobid: number;
+  schedule: string;
+  command: string;
+  active: boolean;
+  last_run: {
+    status: string;
+    start_time: string;
+    end_time: string;
+    return_message: string;
+  } | null;
+}
+
+const CronJobsMonitor = () => {
+  const { data: jobs = [], isLoading, refetch, isFetching } = useQuery<CronJob[]>({
+    queryKey: ["cron-jobs-status"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("cron-status");
+      if (error) throw error;
+      return data.jobs || [];
+    },
+    refetchInterval: 60000, // auto-refresh every minute
+  });
+
+  // Deduplicate by function name, keeping the latest jobid
+  const deduped = Object.values(
+    jobs.reduce<Record<string, CronJob>>((acc, job) => {
+      const name = extractFunctionName(job.command);
+      if (!acc[name] || job.jobid > acc[name].jobid) acc[name] = job;
+      return acc;
+    }, {})
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-xl font-semibold text-foreground flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            Scheduled Jobs
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Automated background tasks and their last execution status
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => refetch()}
+          disabled={isFetching}
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+          Refresh
+        </Button>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-border max-w-full">
+        <div className="min-w-[600px]">
+          {/* Header */}
+          <div className="grid grid-cols-[1fr_150px_100px_180px] gap-2 border-b border-border bg-surface px-4 py-2.5">
+            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
+              Function
+            </span>
+            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
+              Schedule
+            </span>
+            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
+              Status
+            </span>
+            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
+              Last Execution
+            </span>
+          </div>
+
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="border-b border-border/50 px-4 py-3">
+                <div className="h-4 w-48 animate-pulse rounded bg-muted" />
+              </div>
+            ))
+          ) : deduped.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              No scheduled jobs found.
+            </div>
+          ) : (
+            deduped.map((job) => {
+              const fnName = extractFunctionName(job.command);
+              const lastRun = job.last_run;
+              const isSuccess = lastRun?.status === "succeeded";
+              const isFailed = lastRun?.status === "failed";
+
+              return (
+                <div
+                  key={job.jobid}
+                  className={cn(
+                    "grid grid-cols-[1fr_150px_100px_180px] items-center gap-2 border-b border-border/50 px-4 py-3 transition-colors",
+                    !job.active && "opacity-50"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Timer className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+                    <div>
+                      <span className="text-sm font-medium text-foreground">{fnName}</span>
+                      {!job.active && (
+                        <span className="ml-2 text-[10px] font-medium uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          Inactive
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {describeSchedule(job.schedule)}
+                  </span>
+                  <div>
+                    {!lastRun ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : isSuccess ? (
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                        <span className="text-xs font-medium text-success">Success</span>
+                      </div>
+                    ) : isFailed ? (
+                      <div className="flex items-center gap-1.5">
+                        <XCircle className="h-3.5 w-3.5 text-destructive" />
+                        <span className="text-xs font-medium text-destructive">Failed</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{lastRun.status}</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {lastRun?.start_time ? formatTime(lastRun.start_time) : "Never"}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">About scheduled jobs</p>
+        <ul className="mt-2 list-inside list-disc space-y-1">
+          <li><strong>check-overdue</strong> — Marks tasks past deadline as overdue (hourly)</li>
+          <li><strong>deadline-reminder</strong> — Sends email & in-app notifications for tasks due today/tomorrow (daily 8 AM IST)</li>
+          <li>Status auto-refreshes every 60 seconds</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
 
 const SettingsPage = () => {
   const { theme, toggleTheme } = useTheme();
@@ -495,6 +683,9 @@ const SettingsPage = () => {
           </ul>
         </div>
       </div>
+
+      {/* Cron Jobs Monitoring Section */}
+      <CronJobsMonitor />
     </div>
   );
 };

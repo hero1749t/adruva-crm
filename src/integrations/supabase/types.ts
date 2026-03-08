@@ -433,6 +433,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_cron_jobs: { Args: never; Returns: Json }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
