@@ -168,6 +168,39 @@ export type Database = {
           },
         ]
       }
+      custom_roles: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          permissions: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          permissions?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          permissions?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
@@ -505,6 +538,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
+          custom_role_id: string | null
           id: string
           locked_until: string | null
           login_attempts: number | null
@@ -515,6 +549,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          custom_role_id?: string | null
           id: string
           locked_until?: string | null
           login_attempts?: number | null
@@ -525,6 +560,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          custom_role_id?: string | null
           id?: string
           locked_until?: string | null
           login_attempts?: number | null
@@ -533,7 +569,15 @@ export type Database = {
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_custom_role_id_fkey"
+            columns: ["custom_role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recurring_task_templates: {
         Row: {
@@ -683,6 +727,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_permission: {
+        Args: { _action: string; _resource: string; _user_id: string }
+        Returns: boolean
+      }
       get_cron_jobs: { Args: never; Returns: Json }
       get_user_role: {
         Args: { user_id: string }

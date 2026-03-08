@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/hooks/useActivityLog";
 import {
@@ -32,7 +33,8 @@ const InvoicesPage = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
+  const { can } = usePermissions();
+  const isOwnerOrAdmin = can("invoices", "create");
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -64,7 +65,8 @@ const TasksPage = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
+  const { can } = usePermissions();
+  const isOwnerOrAdmin = can("tasks", "create");
 
   const { data, isLoading } = useQuery({
     queryKey: ["tasks", statusFilter, priorityFilter, debouncedSearch, assignedFilter, dateFilter, page],

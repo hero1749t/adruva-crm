@@ -19,6 +19,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import LogsPage from "@/pages/LogsPage";
 import InvoicesPage from "@/pages/InvoicesPage";
 import ReportsPage from "@/pages/ReportsPage";
+import RolesPage from "@/pages/RolesPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="invoices" element={<InvoicesPage />} />
                 <Route path="reports" element={<ReportsPage />} />
+                <Route path="roles" element={<RolesPage />} />
                 <Route path="logs" element={<LogsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />

@@ -10,6 +10,7 @@ interface Profile {
   role: UserRole;
   status: string;
   email?: string;
+  custom_role_id?: string;
 }
 
 interface AuthContextType {

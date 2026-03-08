@@ -24,6 +24,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { logActivity } from "@/hooks/useActivityLog";
+import { useCustomRoles } from "@/hooks/usePermissions";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const roleBadge: Record<string, string> = {
   owner: "bg-destructive/20 text-destructive",
@@ -48,13 +50,19 @@ const TeamPage = () => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { can } = usePermissions();
+  const { data: customRoles = [] } = useCustomRoles();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "team" });
+  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "team", customRoleId: "" });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [roleEditId, setRoleEditId] = useState<string | null>(null);
   const [roleEditValue, setRoleEditValue] = useState<string>("");
 
-  if (profile && profile.role !== "owner") {
+  const canInvite = can("team", "invite");
+  const canManage = can("team", "manage");
+
+  // Only owners and admins with invite permission can view team page
+  if (profile && !canInvite && !canManage && profile.role !== "owner") {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -95,13 +103,20 @@ const TeamPage = () => {
 
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to create user");
+
+      // Assign custom role if selected
+      if (formData.customRoleId && result.userId) {
+        await supabase.from("profiles").update({ custom_role_id: formData.customRoleId }).eq("id", result.userId);
+      }
+
       return { ...result, name: parsed.data.name, role: parsed.data.role, email: parsed.data.email };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["team"] });
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
+      queryClient.invalidateQueries({ queryKey: ["profiles-role-count"] });
       toast({ title: "Team member created" });
-      setFormData({ name: "", email: "", password: "", role: "team" });
+      setFormData({ name: "", email: "", password: "", role: "team", customRoleId: "" });
       setDialogOpen(false);
       logActivity({ entity: "team", entityId: data.userId, action: "member_created", metadata: { member_name: data.name, role: data.role, email: data.email } });
     },
@@ -302,6 +317,26 @@ const TeamPage = () => {
                   </SelectContent>
                 </Select>
               </div>
+              {customRoles.filter((r) => !r.is_system || r.name !== "Owner").length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                    Permission Role
+                  </label>
+                  <Select value={formData.customRoleId} onValueChange={(v) => updateField("customRoleId", v)}>
+                    <SelectTrigger className="border-border bg-muted/30">
+                      <SelectValue placeholder="Select permission role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customRoles
+                        .filter((r) => r.name !== "Owner")
+                        .map((r) => (
+                          <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">Assign granular permissions via a custom role</p>
+                </div>
+              )}
               <Button
                 className="w-full gap-2"
                 onClick={() => createMember.mutate()}

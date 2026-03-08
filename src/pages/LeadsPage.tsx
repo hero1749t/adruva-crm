@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -65,8 +66,9 @@ const LeadsPage = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
-  const isOwner = profile?.role === "owner";
+  const { can } = usePermissions();
+  const isOwnerOrAdmin = can("leads", "create");
+  const isOwner = can("leads", "delete");
 
   const { data, isLoading } = useQuery({
     queryKey: ["leads", statusFilter, debouncedSearch, assignedFilter, dateFilter, page],
