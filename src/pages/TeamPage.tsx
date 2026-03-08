@@ -94,14 +94,15 @@ const TeamPage = () => {
 
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to create user");
-      return result;
+      return { ...result, name: parsed.data.name, role: parsed.data.role, email: parsed.data.email };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["team"] });
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       toast({ title: "Team member created" });
       setFormData({ name: "", email: "", password: "", role: "team" });
       setDialogOpen(false);
+      logActivity({ entity: "team", entityId: data.userId, action: "member_created", metadata: { member_name: data.name, role: data.role, email: data.email } });
     },
     onError: (err: Error) => {
       if (err.message !== "Validation failed") {
