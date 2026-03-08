@@ -19,6 +19,7 @@ const ClientsPage = () => {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
   const { data: clients = [], isLoading } = useQuery({
