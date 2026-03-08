@@ -7,13 +7,13 @@ import {
   ClipboardList,
   Calendar,
   UsersRound,
-  ShieldCheck,
   Settings,
   ScrollText,
   ChevronLeft,
   ChevronRight,
-  Receipt,
+  CreditCard,
   BarChart3,
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,10 +31,10 @@ const navItems: NavItem[] = [
   { icon: UserCheck, label: "Clients", path: "/clients" },
   { icon: ClipboardList, label: "Tasks", path: "/tasks" },
   { icon: Calendar, label: "Calendar", path: "/calendar" },
-  { icon: Receipt, label: "Invoices", path: "/invoices", roles: ["owner", "admin"] },
+  { icon: CreditCard, label: "Payments", path: "/payments", roles: ["owner", "admin"] },
   { icon: BarChart3, label: "Reports", path: "/reports", roles: ["owner", "admin"] },
+  { icon: Zap, label: "Integrations", path: "/integrations", roles: ["owner"] },
   { icon: UsersRound, label: "Team", path: "/team", roles: ["owner", "admin"] },
-  
   { icon: Settings, label: "Settings", path: "/settings", roles: ["owner"] },
   { icon: ScrollText, label: "Logs", path: "/logs", roles: ["owner", "admin"] },
 ];
