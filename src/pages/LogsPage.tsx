@@ -265,6 +265,7 @@ const LogsPage = () => {
             );
           })
         )}
+        </div>
       </div>
 
       {filteredLogs.length > 0 && (
