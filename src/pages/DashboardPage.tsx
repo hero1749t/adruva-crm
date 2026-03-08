@@ -91,6 +91,18 @@ const DashboardPage = () => {
     },
   });
 
+  const { data: recentActivity = [] } = useQuery({
+    queryKey: ["recent-activity-dashboard"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("activity_logs")
+        .select("*, profiles!activity_logs_user_id_fkey(name)")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      return data || [];
+    },
+  });
+
   const now = new Date();
   const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   const todayStr = now.toISOString().split("T")[0];
