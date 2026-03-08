@@ -47,6 +47,7 @@ const TasksPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [assignedFilter, setAssignedFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const perPage = 20;
@@ -60,7 +61,7 @@ const TasksPage = () => {
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["tasks", statusFilter, priorityFilter, search, assignedFilter],
+    queryKey: ["tasks", statusFilter, priorityFilter, search, assignedFilter, dateFilter],
     queryFn: async () => {
       let query = supabase
         .from("tasks")
@@ -76,6 +77,28 @@ const TasksPage = () => {
         } else {
           query = query.eq("assigned_to", assignedFilter);
         }
+      }
+
+      if (dateFilter !== "all") {
+        const now = new Date();
+        let startDate = "";
+        let endDate = "";
+        if (dateFilter === "today") {
+          startDate = now.toISOString().split("T")[0];
+        } else if (dateFilter === "yesterday") {
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          startDate = yesterday.toISOString().split("T")[0];
+          endDate = now.toISOString().split("T")[0];
+        } else if (dateFilter === "this_week") {
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - now.getDay());
+          startDate = weekStart.toISOString().split("T")[0];
+        } else if (dateFilter === "this_month") {
+          startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+        }
+        if (startDate) query = query.gte("deadline", startDate);
+        if (endDate) query = query.lt("deadline", endDate);
       }
 
       const { data } = await query;
@@ -289,6 +312,18 @@ const TasksPage = () => {
             {teamMembers.map((m) => (
               <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select value={dateFilter} onValueChange={(v) => { setDateFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-9 w-40 border-border bg-muted/30 text-sm">
+            <SelectValue placeholder="All Dates" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Dates</SelectItem>
+            <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="yesterday">Yesterday</SelectItem>
+            <SelectItem value="this_week">This Week</SelectItem>
+            <SelectItem value="this_month">This Month</SelectItem>
           </SelectContent>
         </Select>
       </div>
