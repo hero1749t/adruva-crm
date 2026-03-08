@@ -101,10 +101,30 @@ const LeadDetailPage = () => {
     mutationFn: async (updates: Record<string, unknown>) => {
       const { error } = await supabase.from("leads").update(updates).eq("id", id!);
       if (error) throw error;
+      return updates;
     },
     onSuccess: (_data, updates) => {
       if (updates.status) {
+        const oldStatus = lead?.status || "new_lead";
         logActivity({ entity: "lead", entityId: id!, action: "status_changed", metadata: { name: lead?.name, to: updates.status } });
+        sendStatusEmail({ entity: "lead", entityName: lead?.name || "", oldStatus, newStatus: updates.status as string, assignedTo: lead?.assigned_to });
+        // If lead_won, notify about client creation
+        if (updates.status === "lead_won") {
+          const managerName = teamMembers.find((m) => m.id === lead?.assigned_to)?.name;
+          notifyClientCreated({
+            clientName: lead?.name || "",
+            companyName: lead?.company_name,
+            assignedManager: managerName,
+          });
+        }
+      } else if (updates.assigned_to && updates.assigned_to !== lead?.assigned_to) {
+        const member = teamMembers.find((m) => m.id === updates.assigned_to);
+        logActivity({ entity: "lead", entityId: id!, action: "assigned", metadata: { name: lead?.name, to: member?.name } });
+        notifyLeadAssigned({
+          leadName: lead?.name || "",
+          assignedToId: updates.assigned_to as string,
+          assignedToName: member?.name,
+        });
       } else {
         logActivity({ entity: "lead", entityId: id!, action: "updated", metadata: { name: lead?.name } });
       }

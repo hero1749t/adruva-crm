@@ -106,6 +106,16 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
       logActivity({ entity: "lead", entityId: result.id, action: "created", metadata: { name: result.name } });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast({ title: "Lead created successfully" });
+      // Notify assigned member
+      const assignedId = form.getValues("assigned_to");
+      if (assignedId) {
+        const member = teamMembers.find((m) => m.id === assignedId);
+        notifyLeadAssigned({
+          leadName: result.name,
+          assignedToId: assignedId,
+          assignedToName: member?.name,
+        });
+      }
       reset();
       setEmailExists(false);
       onOpenChange(false);

@@ -169,17 +169,26 @@ const LeadsPage = () => {
         .update({ assigned_to: bulkAssignTo || null })
         .in("id", ids);
       if (error) throw error;
+      const assigneeName = teamMembers.find((m) => m.id === bulkAssignTo)?.name || "Unassigned";
       for (const id of ids) {
         const lead = leads.find((l) => l.id === id);
         logActivity({
           entity: "lead",
           entityId: id,
           action: "assigned",
-          metadata: {
-            name: lead?.name,
-            to: teamMembers.find((m) => m.id === bulkAssignTo)?.name || "Unassigned",
-          },
+          metadata: { name: lead?.name, to: assigneeName },
         });
+      }
+      // Send email to assigned member
+      if (bulkAssignTo) {
+        for (const id of ids) {
+          const lead = leads.find((l) => l.id === id);
+          notifyLeadAssigned({
+            leadName: lead?.name || "",
+            assignedToId: bulkAssignTo,
+            assignedToName: assigneeName,
+          });
+        }
       }
     },
     onSuccess: () => {
