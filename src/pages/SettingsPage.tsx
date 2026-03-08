@@ -37,6 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
+import { OnboardingTemplatesSection } from "@/components/OnboardingChecklist";
 
 type TaskPriority = Database["public"]["Enums"]["task_priority"];
 
