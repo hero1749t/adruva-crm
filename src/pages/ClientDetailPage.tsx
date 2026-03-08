@@ -339,7 +339,6 @@ const ClientDetailPage = () => {
               <InfoRow icon={Calendar} label="Contract End" field="contract_end_date" value={client.contract_end_date} />
             </div>
           </div>
-        </div>
 
           {/* Onboarding Checklist */}
           <OnboardingChecklist clientId={id!} clientName={client.client_name} />
