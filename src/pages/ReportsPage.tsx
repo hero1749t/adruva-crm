@@ -18,6 +18,8 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
+import { LeadConversionFunnel } from "@/components/reports/LeadConversionFunnel";
+import { MrrBreakdownChart } from "@/components/reports/MrrBreakdownChart";
 
 /* ── palette ── */
 const COLORS = {
