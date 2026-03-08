@@ -224,7 +224,15 @@ const LogsPage = () => {
             return (
               <div
                 key={log.id}
-                className="grid grid-cols-[1fr_120px_120px_180px_1fr] items-center gap-2 border-b border-border/50 px-4 py-2.5 transition-colors hover:bg-muted/20"
+                className="grid grid-cols-[1fr_120px_120px_180px_1fr] items-center gap-2 border-b border-border/50 px-4 py-2.5 transition-colors hover:bg-muted/20 cursor-pointer"
+                onClick={() => {
+                  const entity = log.entity;
+                  const id = log.entity_id;
+                  if (entity === "lead") navigate(`/leads/${id}`);
+                  else if (entity === "client") navigate(`/clients/${id}`);
+                  else if (entity === "task") navigate(`/tasks`);
+                  else if (entity === "team") navigate(`/team`);
+                }}
               >
                 <span className="text-sm text-foreground truncate">
                   {log.profiles?.name || "System"}
