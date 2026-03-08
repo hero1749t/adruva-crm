@@ -26,6 +26,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/hooks/useActivityLog";
 import { cn } from "@/lib/utils";
+import TaskDetailDrawer from "@/components/TaskDetailDrawer";
 
 const taskPriorityConfig: Record<string, { label: string; color: string }> = {
   urgent: { label: "Urgent", color: "bg-destructive/20 text-destructive" },
