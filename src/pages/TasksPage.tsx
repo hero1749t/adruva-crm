@@ -45,6 +45,7 @@ const TasksPage = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [assignedFilter, setAssignedFilter] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
