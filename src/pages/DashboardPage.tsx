@@ -329,6 +329,42 @@ const DashboardPage = () => {
         )}
       </div>
 
+      {/* Task Completion Rate */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckSquare className="h-5 w-5 text-success" />
+            <div>
+              <h3 className="font-display text-base font-bold text-foreground">Task Completion Rate</h3>
+              <p className="text-xs text-muted-foreground">Weekly breakdown over last 8 weeks</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-lg bg-success/10 px-3 py-1.5">
+            <span className="text-lg font-bold text-success">{completionRate}%</span>
+            <span className="text-[10px] font-medium uppercase text-success/70">Overall</span>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={taskCompletionData} margin={{ left: -10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(213, 50%, 24%)" />
+            <XAxis dataKey="label" stroke="hsl(215, 25%, 53%)" fontSize={11} />
+            <YAxis stroke="hsl(215, 25%, 53%)" fontSize={12} allowDecimals={false} />
+            <Tooltip
+              contentStyle={{
+                background: "hsl(218, 49%, 13%)",
+                border: "1px solid hsl(213, 50%, 24%)",
+                borderRadius: 8,
+                color: "hsl(214, 32%, 91%)",
+              }}
+            />
+            <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+            <Bar dataKey="completed" stackId="a" fill="hsl(160, 84%, 39%)" radius={[0, 0, 0, 0]} name="Completed" />
+            <Bar dataKey="pending" stackId="a" fill="hsl(38, 92%, 50%)" radius={[0, 0, 0, 0]} name="Pending" />
+            <Bar dataKey="overdue" stackId="a" fill="hsl(0, 84%, 60%)" radius={[4, 4, 0, 0]} name="Overdue" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
       {/* Recent Team Activity */}
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="mb-4 flex items-center gap-2">
