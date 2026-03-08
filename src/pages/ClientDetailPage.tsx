@@ -19,6 +19,7 @@ import { useClientHealthScore } from "@/hooks/useClientHealthScore";
 import HealthScoreBadge from "@/components/HealthScoreBadge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { CommunicationLog } from "@/components/CommunicationLog";
+import { ClientAIInsights } from "@/components/ClientAIInsights";
 
 type ClientStatus = Database["public"]["Enums"]["client_status"];
 type BillingStatus = Database["public"]["Enums"]["billing_status"];
