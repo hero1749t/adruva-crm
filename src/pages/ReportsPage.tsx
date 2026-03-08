@@ -589,7 +589,6 @@ const ReportsPage = () => {
       {/* Row 5: MRR */}
       <MrrBreakdownChart data={mrrData} />
     </div>
-    </div>
   );
 };
 
