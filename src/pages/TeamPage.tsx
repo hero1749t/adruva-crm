@@ -175,11 +175,21 @@ const TeamPage = () => {
       if (error) throw error;
       return { userId, newStatus, memberName, oldStatus: currentStatus };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["team"] });
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       toast({ title: data.newStatus === "active" ? "Member reactivated" : "Member deactivated" });
       logActivity({ entity: "team", entityId: data.userId, action: data.newStatus === "active" ? "member_reactivated" : "member_deactivated", metadata: { member_name: data.memberName } });
+
+      // Send in-app notification to the affected user
+      await supabase.from("notifications").insert({
+        user_id: data.userId,
+        title: data.newStatus === "active" ? "Account Reactivated" : "Account Deactivated",
+        message: data.newStatus === "active" 
+          ? "Your account has been reactivated. You can now access the system."
+          : "Your account has been deactivated. Please contact an administrator for more information.",
+        type: data.newStatus === "active" ? "account_reactivated" : "account_deactivated",
+      });
     },
     onError: (err: Error) => {
       toast({ title: "Failed to update status", description: err.message, variant: "destructive" });
