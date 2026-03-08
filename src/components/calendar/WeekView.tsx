@@ -48,6 +48,7 @@ const DroppableWeekDay = ({
     <div
       ref={setNodeRef}
       onClick={() => canCreate && onDayClick(day)}
+      onDoubleClick={() => onDayDoubleClick?.(day)}
       className={cn(
         "group flex flex-col gap-1 border-r border-border/50 p-2 transition-colors",
         today && "bg-primary/[0.03]",
