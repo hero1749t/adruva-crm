@@ -33,6 +33,19 @@ Deno.serve(async (req) => {
 
     if (tasksErr) throw tasksErr;
 
+    // Fetch all user notification preferences
+    const { data: allPrefs } = await supabase
+      .from("notification_preferences")
+      .select("user_id, due_tomorrow, due_today, overdue");
+
+    const prefsMap = new Map<string, { due_tomorrow: boolean; due_today: boolean; overdue: boolean }>();
+    for (const p of allPrefs || []) {
+      prefsMap.set(p.user_id, p);
+    }
+
+    // Default preferences (all enabled) for users without saved preferences
+    const defaultPrefs = { due_tomorrow: true, due_today: true, overdue: true };
+
     const notifications: Array<{
       user_id: string;
       task_id: string;
@@ -46,9 +59,9 @@ Deno.serve(async (req) => {
       const deadline = new Date(task.deadline);
       const userId = task.assigned_to!;
       const clientName = (task.clients as any)?.client_name || "Unknown";
+      const prefs = prefsMap.get(userId) || defaultPrefs;
 
-      if (deadline < todayStart) {
-        // Overdue
+      if (deadline < todayStart && prefs.overdue) {
         notifications.push({
           user_id: userId,
           task_id: task.id,
@@ -57,8 +70,7 @@ Deno.serve(async (req) => {
           message: `"${task.task_title}" for ${clientName} is overdue`,
           notification_date: todayStr,
         });
-      } else if (deadline >= todayStart && deadline < todayEnd) {
-        // Due today
+      } else if (deadline >= todayStart && deadline < todayEnd && prefs.due_today) {
         notifications.push({
           user_id: userId,
           task_id: task.id,
@@ -67,8 +79,7 @@ Deno.serve(async (req) => {
           message: `"${task.task_title}" for ${clientName} is due today`,
           notification_date: todayStr,
         });
-      } else if (deadline >= todayEnd && deadline < tomorrowEnd) {
-        // Due tomorrow
+      } else if (deadline >= todayEnd && deadline < tomorrowEnd && prefs.due_tomorrow) {
         notifications.push({
           user_id: userId,
           task_id: task.id,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -10,9 +10,14 @@ import {
   Loader2,
   Sun,
   Moon,
+  Bell,
+  CalendarClock,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -47,6 +52,7 @@ const priorityOptions: { value: TaskPriority; label: string; color: string }[] =
 
 const SettingsPage = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -61,6 +67,43 @@ const SettingsPage = () => {
   const [newTitle, setNewTitle] = useState("");
   const [newPriority, setNewPriority] = useState<TaskPriority>("medium");
   const [newDays, setNewDays] = useState(7);
+
+  // Notification preferences
+  type NotifPrefs = { due_tomorrow: boolean; due_today: boolean; overdue: boolean };
+  const defaultPrefs: NotifPrefs = { due_tomorrow: true, due_today: true, overdue: true };
+
+  const { data: notifPrefs = defaultPrefs } = useQuery({
+    queryKey: ["notification-preferences"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("notification_preferences")
+        .select("due_tomorrow, due_today, overdue")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return (data as NotifPrefs | null) || defaultPrefs;
+    },
+    enabled: !!user,
+  });
+
+  const updateNotifPref = useMutation({
+    mutationFn: async (updates: Partial<NotifPrefs>) => {
+      const merged = { ...notifPrefs, ...updates };
+      const { error } = await supabase
+        .from("notification_preferences")
+        .upsert(
+          { user_id: user!.id, ...merged, updated_at: new Date().toISOString() },
+          { onConflict: "user_id" }
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notification-preferences"] });
+      toast({ title: "Preferences saved" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["task-templates"],
@@ -189,6 +232,46 @@ const SettingsPage = () => {
             </div>
           </div>
           <Switch checked={theme === "light"} onCheckedChange={toggleTheme} />
+        </div>
+      </div>
+
+      {/* Notification Preferences Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="font-display text-xl font-semibold text-foreground">
+            Notification Preferences
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Choose which task deadline reminders you receive
+          </p>
+        </div>
+
+        <div className="space-y-2 rounded-xl border border-border overflow-hidden">
+          {([
+            { key: "due_tomorrow" as const, label: "Due tomorrow", desc: "Get notified 1 day before a task deadline", icon: <CalendarClock className="h-4 w-4 text-primary" /> },
+            { key: "due_today" as const, label: "Due today", desc: "Get notified on the day a task is due", icon: <Clock className="h-4 w-4 text-warning" /> },
+            { key: "overdue" as const, label: "Overdue", desc: "Get notified when a task passes its deadline", icon: <AlertTriangle className="h-4 w-4 text-destructive" /> },
+          ]).map((item, i) => (
+            <div
+              key={item.key}
+              className={cn(
+                "flex items-center justify-between px-4 py-3",
+                i < 2 && "border-b border-border"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                {item.icon}
+                <div>
+                  <p className="text-sm font-medium text-foreground">{item.label}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+              </div>
+              <Switch
+                checked={notifPrefs[item.key]}
+                onCheckedChange={(checked) => updateNotifPref.mutate({ [item.key]: checked })}
+              />
+            </div>
+          ))}
         </div>
       </div>
 
