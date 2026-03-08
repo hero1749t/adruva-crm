@@ -1047,6 +1047,9 @@ const SettingsPage = () => {
       {/* Onboarding Checklist Templates */}
       <OnboardingTemplatesSection />
 
+      {/* Automation Engine */}
+      <AutomationEngineSettings />
+
       {/* Service Templates */}
       <ServiceTemplatesSettings />
 
