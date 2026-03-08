@@ -41,6 +41,27 @@ const ReportsPage = () => {
   const { profile } = useAuth();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
+  /* ── date range filter ── */
+  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(subMonths(new Date(), 5)));
+  const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
+
+  const inRange = (dateStr: string | null) => {
+    if (!dateStr || (!startDate && !endDate)) return true;
+    const d = new Date(dateStr);
+    if (startDate && endDate) return isWithinInterval(d, { start: startDate, end: endDate });
+    if (startDate) return d >= startDate;
+    if (endDate) return d <= endDate;
+    return true;
+  };
+
+  const presets = [
+    { label: "Last 30d", fn: () => { setStartDate(subMonths(new Date(), 1)); setEndDate(endOfMonth(new Date())); }},
+    { label: "Last 3m", fn: () => { setStartDate(startOfMonth(subMonths(new Date(), 2))); setEndDate(endOfMonth(new Date())); }},
+    { label: "Last 6m", fn: () => { setStartDate(startOfMonth(subMonths(new Date(), 5))); setEndDate(endOfMonth(new Date())); }},
+    { label: "This Year", fn: () => { setStartDate(new Date(new Date().getFullYear(), 0, 1)); setEndDate(endOfMonth(new Date())); }},
+    { label: "All Time", fn: () => { setStartDate(undefined); setEndDate(undefined); }},
+  ];
+
   /* ── data fetching ── */
   const { data: invoices = [], isLoading: invLoading } = useQuery({
     queryKey: ["reports-invoices"],
