@@ -34,9 +34,6 @@ import {
   LineChart,
   Line,
   Legend,
-  FunnelChart,
-  Funnel,
-  LabelList,
 } from "recharts";
 
 function MetricCard({
