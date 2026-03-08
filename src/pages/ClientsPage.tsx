@@ -133,14 +133,15 @@ const ClientsPage = () => {
                   ))}
                 </tr>
               ))
-            ) : clients.length === 0 ? (
+            ) : filteredClients.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No clients yet</td>
+                <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">No clients found</td>
               </tr>
             ) : (
-              clients.map((client) => {
+              filteredClients.map((client) => {
                 const statusConf = clientStatusConfig[client.status || "active"];
                 const managerName = (client as any).profiles?.name || "—";
+                const health = healthScores?.[client.id];
                 return (
                   <tr key={client.id} className="border-b border-border/50 transition-colors hover:bg-primary/[0.03] cursor-pointer" onClick={() => navigate(`/clients/${client.id}`)}>
                     <td className="px-4 py-3 font-medium text-foreground">{client.client_name}</td>
