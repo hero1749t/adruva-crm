@@ -34,8 +34,8 @@ const RANK_STYLES = [
 ];
 
 export function TeamLeaderboard({ tasks, dateRange = "30d" }: TeamLeaderboardProps) {
-  const leaderboard = useMemo<MemberStats[]>(() => {
   const navigate = useNavigate();
+  const leaderboard = useMemo<MemberStats[]>(() => {
     const map = new Map<string, MemberStats>();
 
     tasks.forEach((t) => {
