@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   ArrowLeft, Phone, Mail, Building2, Calendar, IndianRupee,
-  Check, X, Pencil, Loader2, ExternalLink,
+  Check, X, Pencil, Loader2, ExternalLink, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { useClientHealthScore } from "@/hooks/useClientHealthScore";
+import HealthScoreBadge from "@/components/HealthScoreBadge";
 
 type ClientStatus = Database["public"]["Enums"]["client_status"];
 type BillingStatus = Database["public"]["Enums"]["billing_status"];
@@ -210,6 +212,7 @@ const ClientDetailPage = () => {
 
   const completedTasks = tasks.filter((t) => t.status === "completed").length;
   const totalTasks = tasks.length;
+  const { healthScore } = useClientHealthScore(id || "");
 
   return (
     <div className="space-y-6">
@@ -228,6 +231,15 @@ const ClientDetailPage = () => {
         <span className={`rounded-full px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-wider ${bConf.color}`}>
           {bConf.label}
         </span>
+        {healthScore && (
+          <div className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1">
+            <Activity className="h-3 w-3 text-muted-foreground" />
+            <HealthScoreBadge health={healthScore} size="md" />
+            <span className={`font-mono text-[10px] font-medium uppercase tracking-wider ${healthScore.color}`}>
+              {healthScore.label}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Two-panel layout */}

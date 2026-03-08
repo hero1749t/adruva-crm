@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { logActivity } from "@/hooks/useActivityLog";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useClientHealthScores } from "@/hooks/useClientHealthScore";
+import HealthScoreBadge from "@/components/HealthScoreBadge";
 
 const clientStatusConfig: Record<string, { label: string; color: string }> = {
   active: { label: "Active", color: "bg-success/20 text-success" },
@@ -20,6 +22,7 @@ const ClientsPage = () => {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
   const [page, setPage] = useState(1);
+  const [healthFilter, setHealthFilter] = useState<string>("all");
   const perPage = 25;
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -53,6 +56,21 @@ const ClientsPage = () => {
   const startItem = totalCount === 0 ? 0 : (page - 1) * perPage + 1;
   const endItem = Math.min(page * perPage, totalCount);
 
+  const clientIds = clients.map((c) => c.id);
+  const { data: healthScores } = useClientHealthScores(clientIds);
+
+  // Filter by health
+  const filteredClients = healthFilter === "all"
+    ? clients
+    : clients.filter((c) => {
+        const h = healthScores?.[c.id];
+        if (!h) return false;
+        if (healthFilter === "critical") return h.label === "Critical";
+        if (healthFilter === "at_risk") return h.label === "At Risk";
+        if (healthFilter === "healthy") return h.label === "Healthy";
+        return true;
+      });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -67,14 +85,27 @@ const ClientsPage = () => {
         )}
       </div>
 
-      <div className="relative w-64">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search clients..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className="h-9 border-border bg-muted/30 pl-9 text-sm"
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-64">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search clients..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="h-9 border-border bg-muted/30 pl-9 text-sm"
+          />
+        </div>
+        <Select value={healthFilter} onValueChange={(v) => { setHealthFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-9 w-40 border-border bg-muted/30 text-sm">
+            <SelectValue placeholder="All Health" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Health</SelectItem>
+            <SelectItem value="healthy">Healthy (80+)</SelectItem>
+            <SelectItem value="at_risk">At Risk (50-79)</SelectItem>
+            <SelectItem value="critical">Critical (&lt;50)</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
@@ -88,6 +119,7 @@ const ClientsPage = () => {
                 <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Monthly</th>
               )}
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Status</th>
+              <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Health</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Manager</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Start Date</th>
             </tr>
@@ -96,19 +128,20 @@ const ClientsPage = () => {
             {isLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <tr key={i} className="border-b border-border/50">
-                  {Array.from({ length: 7 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <td key={j} className="px-4 py-3"><div className="h-4 w-24 animate-pulse rounded bg-muted" /></td>
                   ))}
                 </tr>
               ))
-            ) : clients.length === 0 ? (
+            ) : filteredClients.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No clients yet</td>
+                <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">No clients found</td>
               </tr>
             ) : (
-              clients.map((client) => {
+              filteredClients.map((client) => {
                 const statusConf = clientStatusConfig[client.status || "active"];
                 const managerName = (client as any).profiles?.name || "—";
+                const health = healthScores?.[client.id];
                 return (
                   <tr key={client.id} className="border-b border-border/50 transition-colors hover:bg-primary/[0.03] cursor-pointer" onClick={() => navigate(`/clients/${client.id}`)}>
                     <td className="px-4 py-3 font-medium text-foreground">{client.client_name}</td>
@@ -146,6 +179,9 @@ const ClientsPage = () => {
                           {statusConf.label}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <HealthScoreBadge health={health} />
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{managerName}</td>
                     <td className="px-4 py-3 text-muted-foreground">{client.start_date ? new Date(client.start_date).toLocaleDateString() : "—"}</td>
