@@ -101,102 +101,110 @@ Deno.serve(async (req) => {
     const buildEmail = (recipientName: string, scopedSection: string) => `
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-<div style="max-width:640px;margin:0 auto;padding:24px">
-  <div style="background:#0f172a;border-radius:12px 12px 0 0;padding:24px 32px;text-align:center">
-    <h1 style="color:#60a5fa;margin:0;font-size:20px;letter-spacing:1px">📊 Weekly Report</h1>
-    <p style="color:#94a3b8;margin:8px 0 0;font-size:13px">${new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#0b1120;font-family:'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased">
+<div style="max-width:620px;margin:0 auto;padding:32px 16px">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);border-radius:16px 16px 0 0;padding:36px 40px;border:1px solid #1e3a5f;border-bottom:none">
+    <table style="width:100%"><tr>
+      <td>
+        <div style="font-family:'DM Mono','DM Sans',monospace;font-size:11px;font-weight:500;color:#60a5fa;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px">Adruvaa CRM</div>
+        <h1 style="margin:0;font-size:24px;font-weight:700;color:#f1f5f9;letter-spacing:-0.3px">Weekly Report</h1>
+      </td>
+      <td style="text-align:right;vertical-align:top">
+        <div style="display:inline-block;background:#60a5fa20;border:1px solid #60a5fa30;border-radius:8px;padding:8px 14px">
+          <span style="font-family:'DM Mono',monospace;font-size:12px;color:#93c5fd">${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+        </div>
+      </td>
+    </tr></table>
   </div>
-  <div style="background:#ffffff;padding:28px 32px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none">
-    <p style="color:#334155;margin:0 0 20px;font-size:14px">Hi ${recipientName},</p>
-    <p style="color:#475569;margin:0 0 20px;font-size:13px">Here's your weekly performance summary:</p>
 
-    <!-- KPIs -->
-    <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+  <!-- Body -->
+  <div style="background:#0f172a;padding:36px 40px;border:1px solid #1e3a5f;border-top:none;border-bottom:none">
+    <p style="color:#94a3b8;margin:0 0 28px;font-size:15px;line-height:1.5">Hi <strong style="color:#f1f5f9">${recipientName}</strong>, here's your performance snapshot for the week.</p>
+
+    <!-- Primary KPIs -->
+    <table style="width:100%;border-collapse:separate;border-spacing:8px;margin:0 -8px 20px">
       <tr>
-        <td style="padding:12px;background:#f0fdf4;border-radius:8px;text-align:center;width:33%">
-          <div style="font-size:22px;font-weight:700;color:#16a34a">${fmtINR(totalRevenue)}</div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Total Revenue</div>
+        <td style="padding:20px 16px;background:linear-gradient(135deg,#064e3b,#065f46);border-radius:12px;text-align:center;width:33%">
+          <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:#34d399;line-height:1">${fmtINR(totalRevenue)}</div>
+          <div style="font-size:10px;color:#6ee7b7;text-transform:uppercase;letter-spacing:1.5px;margin-top:8px;font-weight:500">Revenue</div>
         </td>
-        <td style="width:8px"></td>
-        <td style="padding:12px;background:#eff6ff;border-radius:8px;text-align:center;width:33%">
-          <div style="font-size:22px;font-weight:700;color:#2563eb">${collectionRate}%</div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Collection Rate</div>
+        <td style="padding:20px 16px;background:linear-gradient(135deg,#1e3a5f,#1e40af20);border-radius:12px;text-align:center;width:33%">
+          <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:#60a5fa;line-height:1">${collectionRate}%</div>
+          <div style="font-size:10px;color:#93c5fd;text-transform:uppercase;letter-spacing:1.5px;margin-top:8px;font-weight:500">Collection</div>
         </td>
-        <td style="width:8px"></td>
-        <td style="padding:12px;background:#fefce8;border-radius:8px;text-align:center;width:33%">
-          <div style="font-size:22px;font-weight:700;color:#ca8a04">${fmtINR(outstanding)}</div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Outstanding</div>
+        <td style="padding:20px 16px;background:linear-gradient(135deg,#78350f40,#92400e30);border-radius:12px;text-align:center;width:33%">
+          <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:#fbbf24;line-height:1">${fmtINR(outstanding)}</div>
+          <div style="font-size:10px;color:#fcd34d;text-transform:uppercase;letter-spacing:1.5px;margin-top:8px;font-weight:500">Outstanding</div>
         </td>
       </tr>
     </table>
 
-    <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+    <!-- Secondary KPIs -->
+    <table style="width:100%;border-collapse:separate;border-spacing:8px;margin:0 -8px 32px">
       <tr>
-        <td style="padding:12px;background:#f0f9ff;border-radius:8px;text-align:center;width:25%">
-          <div style="font-size:20px;font-weight:700;color:#0891b2">${activeClients}</div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-top:4px">Active Clients</div>
+        <td style="padding:16px 12px;background:#1e293b;border-radius:10px;text-align:center;width:25%">
+          <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:#22d3ee">${activeClients}</div>
+          <div style="font-size:9px;color:#67e8f9;text-transform:uppercase;letter-spacing:1px;margin-top:6px">Clients</div>
         </td>
-        <td style="width:6px"></td>
-        <td style="padding:12px;background:#f0fdf4;border-radius:8px;text-align:center;width:25%">
-          <div style="font-size:20px;font-weight:700;color:#16a34a">${fmtINR(mrr)}</div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-top:4px">MRR</div>
+        <td style="padding:16px 12px;background:#1e293b;border-radius:10px;text-align:center;width:25%">
+          <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:#34d399">${fmtINR(mrr)}</div>
+          <div style="font-size:9px;color:#6ee7b7;text-transform:uppercase;letter-spacing:1px;margin-top:6px">MRR</div>
         </td>
-        <td style="width:6px"></td>
-        <td style="padding:12px;background:#faf5ff;border-radius:8px;text-align:center;width:25%">
-          <div style="font-size:20px;font-weight:700;color:#7c3aed">${completedTasks}/${totalTasks}</div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-top:4px">Tasks Done</div>
+        <td style="padding:16px 12px;background:#1e293b;border-radius:10px;text-align:center;width:25%">
+          <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:#a78bfa">${completedTasks}<span style="color:#64748b;font-size:14px">/${totalTasks}</span></div>
+          <div style="font-size:9px;color:#c4b5fd;text-transform:uppercase;letter-spacing:1px;margin-top:6px">Tasks Done</div>
         </td>
-        <td style="width:6px"></td>
-        <td style="padding:12px;background:#fef2f2;border-radius:8px;text-align:center;width:25%">
-          <div style="font-size:20px;font-weight:700;color:#dc2626">${overdueTasks}</div>
-          <div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-top:4px">Overdue</div>
+        <td style="padding:16px 12px;background:#1e293b;border-radius:10px;text-align:center;width:25%">
+          <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:${overdueTasks > 0 ? '#f87171' : '#4ade80'}">${overdueTasks}</div>
+          <div style="font-size:9px;color:${overdueTasks > 0 ? '#fca5a5' : '#86efac'};text-transform:uppercase;letter-spacing:1px;margin-top:6px">Overdue</div>
         </td>
       </tr>
     </table>
 
-    <!-- Leads -->
-    <h3 style="color:#1e293b;font-size:13px;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin:24px 0 12px">Lead Pipeline</h3>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:8px">
-      <tr>
-        <td style="padding:8px 0;color:#475569;font-size:13px">Total Leads</td>
-        <td style="padding:8px 0;text-align:right;font-weight:600;color:#1e293b;font-size:13px">${totalLeads}</td>
-      </tr>
-      <tr>
-        <td style="padding:8px 0;color:#475569;font-size:13px">New Leads</td>
-        <td style="padding:8px 0;text-align:right;font-weight:600;color:#2563eb;font-size:13px">${newLeads}</td>
-      </tr>
-      <tr>
-        <td style="padding:8px 0;color:#475569;font-size:13px">Won</td>
-        <td style="padding:8px 0;text-align:right;font-weight:600;color:#16a34a;font-size:13px">${wonLeads}</td>
-      </tr>
-      <tr>
-        <td style="padding:8px 0;color:#475569;font-size:13px">Conversion Rate</td>
-        <td style="padding:8px 0;text-align:right;font-weight:600;color:#7c3aed;font-size:13px">${pct(wonLeads, totalLeads)}%</td>
-      </tr>
-    </table>
+    <!-- Lead Pipeline -->
+    <div style="margin-bottom:28px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:#60a5fa;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #1e3a5f">Lead Pipeline</div>
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="padding:10px 0;color:#94a3b8;font-size:14px">Total Leads</td><td style="padding:10px 0;text-align:right;font-weight:600;color:#f1f5f9;font-size:14px;font-family:'DM Mono',monospace">${totalLeads}</td></tr>
+        <tr><td style="padding:10px 0;color:#94a3b8;font-size:14px;border-top:1px solid #1e293b">New Leads</td><td style="padding:10px 0;text-align:right;font-weight:600;color:#60a5fa;font-size:14px;font-family:'DM Mono',monospace;border-top:1px solid #1e293b">${newLeads}</td></tr>
+        <tr><td style="padding:10px 0;color:#94a3b8;font-size:14px;border-top:1px solid #1e293b">Won</td><td style="padding:10px 0;text-align:right;font-weight:600;color:#34d399;font-size:14px;font-family:'DM Mono',monospace;border-top:1px solid #1e293b">${wonLeads}</td></tr>
+        <tr><td style="padding:10px 0;color:#94a3b8;font-size:14px;border-top:1px solid #1e293b">Conversion Rate</td><td style="padding:10px 0;text-align:right;font-weight:700;color:#a78bfa;font-size:14px;font-family:'DM Mono',monospace;border-top:1px solid #1e293b">${pct(wonLeads, totalLeads)}%</td></tr>
+      </table>
+    </div>
 
     ${sourceRows ? `
-    <h3 style="color:#1e293b;font-size:13px;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin:24px 0 12px">Lead Sources</h3>
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <tr><th style="padding:6px 12px;text-align:left;color:#64748b;font-size:10px;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Source</th><th style="padding:6px 12px;text-align:right;color:#64748b;font-size:10px;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Count</th></tr>
-      ${sourceRows}
-    </table>` : ""}
+    <div style="margin-bottom:28px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:#60a5fa;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #1e3a5f">Lead Sources</div>
+      <table style="width:100%;border-collapse:collapse">
+        <tr><th style="padding:8px 16px;text-align:left;color:#475569;font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid #1e3a5f">Source</th><th style="padding:8px 16px;text-align:right;color:#475569;font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid #1e3a5f">Count</th></tr>
+        ${sourceRows}
+      </table>
+    </div>` : ""}
 
     ${topClientRows ? `
-    <h3 style="color:#1e293b;font-size:13px;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin:24px 0 12px">Top Clients by Revenue</h3>
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <tr><th style="padding:6px 12px;text-align:left;color:#64748b;font-size:10px;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Client</th><th style="padding:6px 12px;text-align:right;color:#64748b;font-size:10px;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Revenue</th></tr>
-      ${topClientRows}
-    </table>` : ""}
+    <div style="margin-bottom:28px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:#60a5fa;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #1e3a5f">Top Clients by Revenue</div>
+      <table style="width:100%;border-collapse:collapse">
+        <tr><th style="padding:8px 16px;text-align:left;color:#475569;font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid #1e3a5f">Client</th><th style="padding:8px 16px;text-align:right;color:#475569;font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid #1e3a5f">Revenue</th></tr>
+        ${topClientRows}
+      </table>
+    </div>` : ""}
 
     ${scopedSection}
-
-    <div style="margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center">
-      <p style="color:#94a3b8;font-size:11px;margin:0">Adruvaa Digital Agency — Automated Weekly Report</p>
-    </div>
   </div>
+
+  <!-- Footer -->
+  <div style="background:#0b1120;border-radius:0 0 16px 16px;padding:24px 40px;border:1px solid #1e3a5f;border-top:none;text-align:center">
+    <p style="color:#334155;font-size:11px;margin:0;font-family:'DM Mono',monospace;letter-spacing:0.5px">Adruvaa Digital Agency — Automated Weekly Report</p>
+  </div>
+
 </div>
 </body>
 </html>`;
