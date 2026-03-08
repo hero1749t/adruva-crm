@@ -263,7 +263,7 @@ const TasksPage = () => {
             ))}
           </SelectContent>
         </Select>
-        <Select value={assignedFilter} onValueChange={setAssignedFilter}>
+        <Select value={assignedFilter} onValueChange={(v) => { setAssignedFilter(v); setPage(1); }}>
           <SelectTrigger className="h-9 w-44 border-border bg-muted/30 text-sm">
             <SelectValue placeholder="All Assigned" />
           </SelectTrigger>
