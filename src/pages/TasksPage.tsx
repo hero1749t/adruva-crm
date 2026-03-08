@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Plus, Download, UserPlus, CheckCircle2, X } from "lucide-react";
+import { Search, Plus, Download, UserPlus, CheckCircle2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
