@@ -296,7 +296,8 @@ const SettingsPage = () => {
           </Button>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-border">
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="min-w-[600px]">
           {/* Header */}
           <div className="grid grid-cols-[1fr_140px_120px_80px_60px] gap-2 border-b border-border bg-surface px-4 py-2.5">
             <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
