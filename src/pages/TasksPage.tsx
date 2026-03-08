@@ -56,7 +56,7 @@ const TasksPage = () => {
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["tasks", statusFilter, priorityFilter, search],
+    queryKey: ["tasks", statusFilter, priorityFilter, search, assignedFilter],
     queryFn: async () => {
       let query = supabase
         .from("tasks")
@@ -66,6 +66,13 @@ const TasksPage = () => {
       if (statusFilter !== "all") query = query.eq("status", statusFilter as any);
       if (priorityFilter !== "all") query = query.eq("priority", priorityFilter as any);
       if (search) query = query.ilike("task_title", `%${search}%`);
+      if (assignedFilter !== "all") {
+        if (assignedFilter === "unassigned") {
+          query = query.is("assigned_to", null);
+        } else {
+          query = query.eq("assigned_to", assignedFilter);
+        }
+      }
 
       const { data } = await query;
       return data || [];
