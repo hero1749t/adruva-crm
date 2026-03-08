@@ -114,7 +114,7 @@ const ReportsPage = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("leads")
-        .select("id, status, created_at")
+        .select("id, status, source, created_at")
         .eq("is_deleted", false);
       return data || [];
     },
