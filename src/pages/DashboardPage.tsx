@@ -152,6 +152,26 @@ const DashboardPage = () => {
         <p className="mt-1 text-sm text-muted-foreground">Overview of your agency performance</p>
       </div>
 
+      {overdueTasks > 0 && (
+        <div
+          className="flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/10 px-5 py-3.5 cursor-pointer transition-colors hover:bg-destructive/15"
+          onClick={() => navigate("/tasks?status=overdue")}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/20">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-destructive">
+                {overdueTasks} overdue task{overdueTasks !== 1 ? "s" : ""} need attention
+              </p>
+              <p className="text-xs text-destructive/70">Click to view and resolve overdue tasks</p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-destructive/50" />
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard icon={Users} label="Total Leads" value={totalLeads} color="bg-primary/15 text-primary" />
         <MetricCard icon={UserPlus} label="New This Month" value={newThisMonth} color="bg-accent/15 text-accent" />
