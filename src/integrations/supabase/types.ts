@@ -66,6 +66,7 @@ export type Database = {
           monthly_payment: number | null
           phone: string | null
           plan: string | null
+          services: string[] | null
           start_date: string | null
           status: Database["public"]["Enums"]["client_status"] | null
           updated_at: string | null
@@ -83,6 +84,7 @@ export type Database = {
           monthly_payment?: number | null
           phone?: string | null
           plan?: string | null
+          services?: string[] | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["client_status"] | null
           updated_at?: string | null
@@ -100,6 +102,7 @@ export type Database = {
           monthly_payment?: number | null
           phone?: string | null
           plan?: string | null
+          services?: string[] | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["client_status"] | null
           updated_at?: string | null
@@ -198,6 +201,42 @@ export type Database = {
           name?: string
           permissions?: Json
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      integrations: {
+        Row: {
+          api_key_encrypted: string | null
+          config: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          provider?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -625,6 +664,77 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      service_template_steps: {
+        Row: {
+          deadline_offset_days: number | null
+          description: string | null
+          id: string
+          priority: string | null
+          sort_order: number
+          template_id: string
+          title: string
+        }
+        Insert: {
+          deadline_offset_days?: number | null
+          description?: string | null
+          id?: string
+          priority?: string | null
+          sort_order?: number
+          template_id: string
+          title: string
+        }
+        Update: {
+          deadline_offset_days?: number | null
+          description?: string | null
+          id?: string
+          priority?: string | null
+          sort_order?: number
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_template_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "service_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       task_templates: {
         Row: {
