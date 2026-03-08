@@ -1,1 +1,7 @@
 project_id = "nrvevkiddjqndapvmcmo"
+
+[functions.check-overdue]
+verify_jwt = false
+
+[functions.deadline-reminder]
+verify_jwt = false
