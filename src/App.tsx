@@ -38,6 +38,7 @@ const App = () => (
               <Route path="tasks" element={<TasksPage />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="team" element={<TeamPage />} />
+              <Route path="settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
