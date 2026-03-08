@@ -136,16 +136,16 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
   );
 
   return (
-    <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent className="w-full overflow-y-auto border-border bg-card sm:max-w-lg">
-        <SheetHeader className="pb-4">
-          <SheetTitle className="font-display text-xl font-bold text-foreground">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-lg">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="font-display text-xl font-bold text-foreground">
             New Lead
-          </SheetTitle>
-          <SheetDescription className="text-sm text-muted-foreground">
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
             Add a new lead to your pipeline
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Name */}
