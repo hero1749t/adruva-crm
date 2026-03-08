@@ -157,6 +157,40 @@ const LeadsPage = () => {
     },
   });
 
+  const bulkStatusChange = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selected);
+      const { error } = await supabase
+        .from("leads")
+        .update({ status: bulkStatus as any })
+        .in("id", ids);
+      if (error) throw error;
+      for (const id of ids) {
+        const lead = leads.find((l) => l.id === id);
+        logActivity({
+          entity: "lead",
+          entityId: id,
+          action: "status_changed",
+          metadata: {
+            name: lead?.name,
+            from: lead?.status,
+            to: bulkStatus,
+          },
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast({ title: `${selected.size} lead(s) status updated` });
+      clearSelection();
+      setStatusDialogOpen(false);
+      setBulkStatus("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Status update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   const bulkDelete = useMutation({
     mutationFn: async () => {
       const ids = Array.from(selected);
