@@ -461,6 +461,42 @@ const LeadsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk Status Change Dialog */}
+      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change status for {selected.size} lead{selected.size !== 1 ? "s" : ""}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select a new status to apply to all selected leads.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Select value={bulkStatus} onValueChange={setBulkStatus}>
+            <SelectTrigger className="w-full border-border">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(leadStatusConfig).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  <div className="flex items-center gap-2">
+                    <span className={cn("h-2 w-2 rounded-full", config.color.split(" ")[0])} />
+                    {config.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBulkStatus("")}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!bulkStatus || bulkStatusChange.isPending}
+              onClick={(e) => { e.preventDefault(); bulkStatusChange.mutate(); }}
+            >
+              {bulkStatusChange.isPending ? "Updating..." : "Update Status"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
