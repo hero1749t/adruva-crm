@@ -34,6 +34,7 @@ const DroppableDay = ({
   canCreate,
   canDrag,
   onDayClick,
+  onDayDoubleClick,
 }: {
   dateKey: string;
   day: Date;
@@ -44,6 +45,7 @@ const DroppableDay = ({
   canCreate: boolean;
   canDrag: boolean;
   onDayClick: (day: Date) => void;
+  onDayDoubleClick?: (day: Date) => void;
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey, data: { date: day } });
 
