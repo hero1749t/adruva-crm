@@ -96,14 +96,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get email addresses from auth.users via admin API
-    const emails: string[] = [];
-    for (const uid of recipientIds) {
-      const { data: userData } = await adminClient.auth.admin.getUserById(uid);
-      if (userData?.user?.email) {
-        emails.push(userData.user.email);
-      }
-    }
+    // TESTING MODE: Send only to verified Resend owner email
+    // Remove this override after verifying a custom domain on Resend
+    const emails: string[] = ["adruvaadsagency@gmail.com"];
 
     if (emails.length === 0) {
       return new Response(
