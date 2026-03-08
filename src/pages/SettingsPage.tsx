@@ -685,6 +685,9 @@ const SettingsPage = () => {
         </div>
       </div>
 
+      {/* Recurring Tasks Section */}
+      <RecurringTasksSection />
+
       {/* Cron Jobs Monitoring Section */}
       <CronJobsMonitor />
     </div>
