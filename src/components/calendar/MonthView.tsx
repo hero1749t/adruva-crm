@@ -100,7 +100,7 @@ const DroppableDay = ({
   );
 };
 
-const MonthView = ({ currentMonth, tasksByDate, canCreate, canDrag, onDayClick }: MonthViewProps) => {
+const MonthView = ({ currentMonth, tasksByDate, canCreate, canDrag, onDayClick, onDayDoubleClick }: MonthViewProps) => {
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentMonth));
     const end = endOfWeek(endOfMonth(currentMonth));
