@@ -227,9 +227,97 @@ const ReportsPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Reports</h1>
-        <p className="text-sm text-muted-foreground">Revenue analytics, trends & team performance</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Reports</h1>
+          <p className="text-sm text-muted-foreground">Revenue analytics, trends & team performance</p>
+        </div>
+
+        {/* Date Range Filter */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Preset buttons */}
+          <div className="flex gap-1">
+            {presets.map((p) => (
+              <Button
+                key={p.label}
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                onClick={p.fn}
+              >
+                {p.label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="h-5 w-px bg-border" />
+
+          {/* From date */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-8 w-[130px] justify-start gap-1.5 border-border bg-muted/30 text-xs",
+                  !startDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="h-3 w-3" />
+                {startDate ? format(startDate, "dd MMM yyyy") : "From"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={startDate}
+                onSelect={setStartDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+
+          <span className="text-xs text-muted-foreground">–</span>
+
+          {/* To date */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-8 w-[130px] justify-start gap-1.5 border-border bg-muted/30 text-xs",
+                  !endDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="h-3 w-3" />
+                {endDate ? format(endDate, "dd MMM yyyy") : "To"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={endDate}
+                onSelect={setEndDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+
+          {(startDate || endDate) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={() => { setStartDate(undefined); setEndDate(undefined); }}
+              title="Clear dates"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* KPI Cards */}
