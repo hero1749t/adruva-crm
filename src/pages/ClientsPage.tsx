@@ -1,13 +1,14 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Search } from "lucide-react";
+import { Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { logActivity } from "@/hooks/useActivityLog";
-import { useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 
 const clientStatusConfig: Record<string, { label: string; color: string }> = {
   active: { label: "Active", color: "bg-success/20 text-success" },
@@ -17,34 +18,47 @@ const clientStatusConfig: Record<string, { label: string; color: string }> = {
 
 const ClientsPage = () => {
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
+  const [page, setPage] = useState(1);
+  const perPage = 25;
   const navigate = useNavigate();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
-  const { data: clients = [], isLoading } = useQuery({
-    queryKey: ["clients", search],
+  const { data, isLoading } = useQuery({
+    queryKey: ["clients", debouncedSearch, page],
     queryFn: async () => {
+      const from = (page - 1) * perPage;
+      const to = from + perPage - 1;
+
       let query = supabase
         .from("clients")
-        .select("*, profiles!clients_assigned_manager_fkey(name)")
-        .order("created_at", { ascending: false });
+        .select("*, profiles!clients_assigned_manager_fkey(name)", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
-      if (search) {
-        query = query.or(`client_name.ilike.%${search}%,company_name.ilike.%${search}%,email.ilike.%${search}%`);
+      if (debouncedSearch) {
+        query = query.or(`client_name.ilike.%${debouncedSearch}%,company_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`);
       }
 
-      const { data } = await query;
-      return data || [];
+      const { data, count } = await query;
+      return { clients: data || [], total: count || 0 };
     },
   });
+
+  const clients = data?.clients || [];
+  const totalCount = data?.total || 0;
+  const totalPages = Math.ceil(totalCount / perPage);
+  const startItem = totalCount === 0 ? 0 : (page - 1) * perPage + 1;
+  const endItem = Math.min(page * perPage, totalCount);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Clients</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{clients.length} clients</p>
+          <p className="mt-1 text-sm text-muted-foreground">{totalCount} clients</p>
         </div>
         {isOwnerOrAdmin && (
           <Button variant="outline" size="sm" className="gap-2">
@@ -58,7 +72,7 @@ const ClientsPage = () => {
         <Input
           placeholder="Search clients..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="h-9 border-border bg-muted/30 pl-9 text-sm"
         />
       </div>
@@ -141,6 +155,23 @@ const ClientsPage = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {totalCount > 0 ? `Showing ${startItem}–${endItem} of ${totalCount} results` : "No results"}
+        </p>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

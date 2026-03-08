@@ -177,6 +177,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string
+          search_vector: unknown
           service_interest: string | null
           source: string | null
           status: Database["public"]["Enums"]["lead_status"]
@@ -192,6 +193,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone: string
+          search_vector?: unknown
           service_interest?: string | null
           source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
@@ -207,6 +209,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string
+          search_vector?: unknown
           service_interest?: string | null
           source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
