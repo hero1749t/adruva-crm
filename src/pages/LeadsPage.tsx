@@ -495,6 +495,8 @@ const LeadsPage = () => {
           </div>
         )}
       </div>
+      </>
+      )}
 
       <NewLeadDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
       <ImportLeadsDialog open={importOpen} onOpenChange={setImportOpen} />
