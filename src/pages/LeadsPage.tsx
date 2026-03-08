@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Trash2, UserPlus, X, ArrowUpDown } from "lucide-react";
+import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Trash2, UserPlus, X, ArrowUpDown, LayoutGrid, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,7 @@ import { sendStatusEmail } from "@/lib/send-status-email";
 import { notifyLeadAssigned } from "@/lib/email-notifications";
 import NewLeadDrawer from "@/components/NewLeadDrawer";
 import ImportLeadsDialog from "@/components/ImportLeadsDialog";
+import LeadsKanbanView from "@/components/leads/LeadsKanbanView";
 import { exportLeadsCsv } from "@/lib/csv-utils";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -45,6 +46,7 @@ const leadStatusConfig: Record<string, { label: string; color: string }> = {
 
 const LeadsPage = () => {
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const debouncedSearch = useDebounce(search, 400);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assignedFilter, setAssignedFilter] = useState<string>("all");
@@ -117,6 +119,30 @@ const LeadsPage = () => {
   const leads = data?.leads || [];
   const totalCount = data?.total || 0;
   const totalPages = Math.ceil(totalCount / perPage);
+
+  // Kanban: fetch all leads (no pagination)
+  const { data: kanbanData, isLoading: kanbanLoading } = useQuery({
+    queryKey: ["leads-kanban", statusFilter, debouncedSearch, assignedFilter, dateFilter],
+    enabled: viewMode === "kanban",
+    queryFn: async () => {
+      let query = supabase
+        .from("leads")
+        .select("*, profiles!leads_assigned_to_fkey(name)")
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: false });
+
+      if (statusFilter !== "all") query = query.eq("status", statusFilter as any);
+      if (assignedFilter !== "all") {
+        if (assignedFilter === "unassigned") query = query.is("assigned_to", null);
+        else query = query.eq("assigned_to", assignedFilter);
+      }
+      if (debouncedSearch) {
+        query = query.or(`name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,company_name.ilike.%${debouncedSearch}%`);
+      }
+      const { data } = await query;
+      return data || [];
+    },
+  });
 
   const { data: teamMembers = [] } = useQuery({
     queryKey: ["team-members"],
@@ -244,19 +270,43 @@ const LeadsPage = () => {
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Leads</h1>
           <p className="mt-1 text-sm text-muted-foreground">{totalCount} total leads</p>
         </div>
-        {isOwnerOrAdmin && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => setImportOpen(true)}>
-              <Upload className="h-4 w-4" /> Import
+        <div>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Leads</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{totalCount} total leads</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              className="h-7 gap-1.5 px-2.5"
+              onClick={() => setViewMode("table")}
+            >
+              <List className="h-3.5 w-3.5" /> Table
             </Button>
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => exportLeadsCsv(leads)}>
-              <Download className="h-4 w-4" /> Export
-            </Button>
-            <Button size="sm" className="gap-2" onClick={() => setDrawerOpen(true)}>
-              <Plus className="h-4 w-4" /> New Lead
+            <Button
+              variant={viewMode === "kanban" ? "default" : "ghost"}
+              size="sm"
+              className="h-7 gap-1.5 px-2.5"
+              onClick={() => setViewMode("kanban")}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Kanban
             </Button>
           </div>
-        )}
+          {isOwnerOrAdmin && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4" /> Import
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => exportLeadsCsv(leads)}>
+                <Download className="h-4 w-4" /> Export
+              </Button>
+              <Button size="sm" className="gap-2" onClick={() => setDrawerOpen(true)}>
+                <Plus className="h-4 w-4" /> New Lead
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {selected.size > 0 && (
@@ -333,6 +383,10 @@ const LeadsPage = () => {
         </Select>
       </div>
 
+      {viewMode === "kanban" ? (
+        <LeadsKanbanView leads={kanbanData || []} isLoading={kanbanLoading} />
+      ) : (
+      <>
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
           <thead>
@@ -441,6 +495,8 @@ const LeadsPage = () => {
           </div>
         )}
       </div>
+      </>
+      )}
 
       <NewLeadDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
       <ImportLeadsDialog open={importOpen} onOpenChange={setImportOpen} />
