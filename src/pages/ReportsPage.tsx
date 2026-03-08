@@ -108,6 +108,17 @@ const ReportsPage = () => {
     },
   });
 
+  const { data: leads = [] } = useQuery({
+    queryKey: ["reports-leads"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("leads")
+        .select("id, status, created_at")
+        .eq("is_deleted", false);
+      return data || [];
+    },
+  });
+
   const isLoading = invLoading || taskLoading;
 
   /* ── filtered data ── */
