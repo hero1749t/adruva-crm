@@ -239,6 +239,18 @@ const ReportsPage = () => {
     return stages.map((s) => ({ name: s.label, value: counts[s.key] || 0 }));
   }, [filteredLeads]);
 
+  /* ── lead source breakdown ── */
+  const leadSourceData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredLeads.forEach((l) => {
+      const src = (l as any).source || "Unknown";
+      counts[src] = (counts[src] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredLeads]);
+
   /* ── MRR breakdown ── */
   const mrrData = useMemo(() => {
     // Build monthly MRR from active clients with monthly_payment
