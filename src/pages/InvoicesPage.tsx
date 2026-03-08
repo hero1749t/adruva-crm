@@ -33,7 +33,8 @@ const InvoicesPage = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
+  const { can } = usePermissions();
+  const isOwnerOrAdmin = can("invoices", "create");
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");

@@ -65,7 +65,8 @@ const TasksPage = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
+  const { can } = usePermissions();
+  const isOwnerOrAdmin = can("tasks", "create");
 
   const { data, isLoading } = useQuery({
     queryKey: ["tasks", statusFilter, priorityFilter, debouncedSearch, assignedFilter, dateFilter, page],
