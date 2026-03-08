@@ -266,8 +266,8 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
             </Button>
           </div>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
 
