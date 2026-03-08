@@ -396,10 +396,27 @@ const TasksPage = () => {
                         {priorityConf.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider ${statusConf.color}`}>
-                        {statusConf.label}
-                      </span>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={task.status || "pending"}
+                        onValueChange={(v) => {
+                          const updates: any = { status: v };
+                          if (v === "completed") updates.completed_at = new Date().toISOString();
+                          supabase.from("tasks").update(updates).eq("id", task.id).then(() => {
+                            queryClient.invalidateQueries({ queryKey: ["tasks"] });
+                            logActivity({ entity: "task", entityId: task.id, action: "status_changed", metadata: { title: task.task_title, from: task.status, to: v } });
+                          });
+                        }}
+                      >
+                        <SelectTrigger className={`h-7 w-[120px] border-none px-2.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider ${statusConf.color}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(taskStatusConfig).map(([key, config]) => (
+                            <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{assignedName}</td>
                     <td className="px-4 py-3 text-muted-foreground">{task.deadline ? new Date(task.deadline).toLocaleDateString() : "—"}</td>
