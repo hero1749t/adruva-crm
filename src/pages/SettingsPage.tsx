@@ -1052,11 +1052,6 @@ const SettingsPage = () => {
       {/* Service Templates */}
       <ServiceTemplatesSettings />
 
-      {/* Payment Gateway */}
-      <PaymentGatewaySettings />
-
-      {/* Integrations */}
-      <IntegrationsSettings />
 
       {/* Recurring Tasks Section */}
       <RecurringTasksSection />
