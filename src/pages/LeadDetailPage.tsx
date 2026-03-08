@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyLeadAssigned, notifyClientCreated } from "@/lib/email-notifications";
 import { sendStatusEmail } from "@/lib/send-status-email";
+import { CommunicationLog } from "@/components/CommunicationLog";
 import {
   ArrowLeft, Phone, Mail, Building2, Globe, StickyNote,
   Check, X, Pencil, MessageSquare, Calendar, FileText, Send, Loader2,
