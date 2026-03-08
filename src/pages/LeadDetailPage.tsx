@@ -470,6 +470,9 @@ const LeadDetailPage = () => {
               )}
             </div>
           </div>
+
+          {/* Communication Log */}
+          <CommunicationLog entityType="lead" entityId={id!} />
         </div>
       </div>
     </div>

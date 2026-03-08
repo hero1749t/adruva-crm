@@ -343,6 +343,9 @@ const ClientDetailPage = () => {
 
           {/* Onboarding Checklist */}
           <OnboardingChecklist clientId={id!} clientName={client.client_name} />
+
+          {/* Communication Log */}
+          <CommunicationLog entityType="client" entityId={id!} />
         </div>
 
         {/* Right Panel — Tasks */}
