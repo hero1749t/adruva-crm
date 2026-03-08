@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     const topClientRows = topClients
       .map(
         (c) =>
-          `<tr><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${c.name}</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">${fmtINR(c.rev)}</td></tr>`
+          `<tr><td style="padding:10px 16px;border-bottom:1px solid #1e293b;color:#cbd5e1;font-size:13px">${c.name}</td><td style="padding:10px 16px;border-bottom:1px solid #1e293b;text-align:right;color:#34d399;font-weight:700;font-size:13px">${fmtINR(c.rev)}</td></tr>`
       )
       .join("");
 
