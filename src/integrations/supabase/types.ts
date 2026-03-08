@@ -332,6 +332,53 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_task_templates: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          deadline_offset_days: number | null
+          id: string
+          is_active: boolean | null
+          priority: Database["public"]["Enums"]["task_priority"] | null
+          schedule_day: number
+          schedule_type: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          deadline_offset_days?: number | null
+          id?: string
+          is_active?: boolean | null
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          schedule_day: number
+          schedule_type: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          deadline_offset_days?: number | null
+          id?: string
+          is_active?: boolean | null
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          schedule_day?: number
+          schedule_type?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_task_templates_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_templates: {
         Row: {
           deadline_offset_days: number | null
