@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Trash2, UserPlus, X } from "lucide-react";
+import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Trash2, UserPlus, X, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +49,9 @@ const LeadsPage = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [bulkAssignTo, setBulkAssignTo] = useState("");
+  const [bulkStatus, setBulkStatus] = useState("");
   const perPage = 20;
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -155,6 +157,40 @@ const LeadsPage = () => {
     },
   });
 
+  const bulkStatusChange = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selected);
+      const { error } = await supabase
+        .from("leads")
+        .update({ status: bulkStatus as any })
+        .in("id", ids);
+      if (error) throw error;
+      for (const id of ids) {
+        const lead = leads.find((l) => l.id === id);
+        logActivity({
+          entity: "lead",
+          entityId: id,
+          action: "status_changed",
+          metadata: {
+            name: lead?.name,
+            from: lead?.status,
+            to: bulkStatus,
+          },
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast({ title: `${selected.size} lead(s) status updated` });
+      clearSelection();
+      setStatusDialogOpen(false);
+      setBulkStatus("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Status update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   const bulkDelete = useMutation({
     mutationFn: async () => {
       const ids = Array.from(selected);
@@ -214,14 +250,24 @@ const LeadsPage = () => {
           </span>
           <div className="ml-auto flex items-center gap-2">
             {isOwnerOrAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setAssignDialogOpen(true)}
-              >
-                <UserPlus className="h-4 w-4" /> Assign
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setStatusDialogOpen(true)}
+                >
+                  <ArrowUpDown className="h-4 w-4" /> Status
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setAssignDialogOpen(true)}
+                >
+                  <UserPlus className="h-4 w-4" /> Assign
+                </Button>
+              </>
             )}
             {isOwner && (
               <Button
@@ -411,6 +457,42 @@ const LeadsPage = () => {
               onClick={(e) => { e.preventDefault(); bulkDelete.mutate(); }}
             >
               {bulkDelete.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Status Change Dialog */}
+      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change status for {selected.size} lead{selected.size !== 1 ? "s" : ""}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select a new status to apply to all selected leads.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Select value={bulkStatus} onValueChange={setBulkStatus}>
+            <SelectTrigger className="w-full border-border">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(leadStatusConfig).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  <div className="flex items-center gap-2">
+                    <span className={cn("h-2 w-2 rounded-full", config.color.split(" ")[0])} />
+                    {config.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBulkStatus("")}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!bulkStatus || bulkStatusChange.isPending}
+              onClick={(e) => { e.preventDefault(); bulkStatusChange.mutate(); }}
+            >
+              {bulkStatusChange.isPending ? "Updating..." : "Update Status"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
