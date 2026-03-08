@@ -139,6 +139,7 @@ const MonthView = ({ currentMonth, tasksByDate, canCreate, canDrag, onDayClick, 
               canCreate={canCreate}
               canDrag={canDrag}
               onDayClick={onDayClick}
+              onDayDoubleClick={onDayDoubleClick}
             />
           );
         })}
