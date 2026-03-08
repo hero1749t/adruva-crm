@@ -121,6 +121,53 @@ export type Database = {
           },
         ]
       }
+      communication_logs: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          direction: string
+          duration_minutes: number | null
+          entity_id: string
+          entity_type: string
+          id: string
+          subject: string | null
+          type: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          duration_minutes?: number | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          subject?: string | null
+          type: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          duration_minutes?: number | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          subject?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_logs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_activities: {
         Row: {
           content: string
