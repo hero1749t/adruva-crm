@@ -270,19 +270,43 @@ const LeadsPage = () => {
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Leads</h1>
           <p className="mt-1 text-sm text-muted-foreground">{totalCount} total leads</p>
         </div>
-        {isOwnerOrAdmin && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => setImportOpen(true)}>
-              <Upload className="h-4 w-4" /> Import
+        <div>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Leads</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{totalCount} total leads</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              className="h-7 gap-1.5 px-2.5"
+              onClick={() => setViewMode("table")}
+            >
+              <List className="h-3.5 w-3.5" /> Table
             </Button>
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => exportLeadsCsv(leads)}>
-              <Download className="h-4 w-4" /> Export
-            </Button>
-            <Button size="sm" className="gap-2" onClick={() => setDrawerOpen(true)}>
-              <Plus className="h-4 w-4" /> New Lead
+            <Button
+              variant={viewMode === "kanban" ? "default" : "ghost"}
+              size="sm"
+              className="h-7 gap-1.5 px-2.5"
+              onClick={() => setViewMode("kanban")}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Kanban
             </Button>
           </div>
-        )}
+          {isOwnerOrAdmin && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4" /> Import
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => exportLeadsCsv(leads)}>
+                <Download className="h-4 w-4" /> Export
+              </Button>
+              <Button size="sm" className="gap-2" onClick={() => setDrawerOpen(true)}>
+                <Plus className="h-4 w-4" /> New Lead
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {selected.size > 0 && (
