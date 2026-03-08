@@ -52,6 +52,100 @@ export type Database = {
           },
         ]
       }
+      automation_logs: {
+        Row: {
+          actions_executed: Json
+          created_at: string
+          error_message: string | null
+          id: string
+          rule_id: string
+          status: string
+          trigger_entity_id: string
+          trigger_event: string
+        }
+        Insert: {
+          actions_executed?: Json
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          rule_id: string
+          status?: string
+          trigger_entity_id: string
+          trigger_event: string
+        }
+        Update: {
+          actions_executed?: Json
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          rule_id?: string
+          status?: string
+          trigger_entity_id?: string
+          trigger_event?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rules: {
+        Row: {
+          actions: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          execution_count: number
+          id: string
+          is_active: boolean
+          last_executed_at: string | null
+          name: string
+          trigger_conditions: Json
+          trigger_event: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          execution_count?: number
+          id?: string
+          is_active?: boolean
+          last_executed_at?: string | null
+          name: string
+          trigger_conditions?: Json
+          trigger_event: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          execution_count?: number
+          id?: string
+          is_active?: boolean
+          last_executed_at?: string | null
+          name?: string
+          trigger_conditions?: Json
+          trigger_event?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           assigned_manager: string | null
