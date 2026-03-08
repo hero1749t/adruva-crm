@@ -13,8 +13,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 const phoneRegex = /^[+]?[\d\s\-()]{7,15}$/;
@@ -136,15 +136,16 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
   );
 
   return (
-    <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent className="w-full overflow-y-auto border-border bg-card sm:max-w-lg">
-        <SheetHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="font-display text-xl font-bold text-foreground">
-              New Lead
-            </SheetTitle>
-          </div>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-lg">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="font-display text-xl font-bold text-foreground">
+            New Lead
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Add a new lead to your pipeline
+          </DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Name */}
@@ -265,8 +266,8 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
             </Button>
           </div>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
 
