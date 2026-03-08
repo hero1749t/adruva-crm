@@ -217,6 +217,15 @@ const ReportsPage = () => {
     color: "hsl(214, 32%, 91%)",
   };
 
+  const exportData: ReportExportData = {
+    metrics,
+    monthlyRevenue,
+    invoiceStatusDist,
+    teamPerformance,
+    clientRevenue,
+    dateRange: { start: startDate, end: endDate },
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
