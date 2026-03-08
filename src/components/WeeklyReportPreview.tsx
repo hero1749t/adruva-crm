@@ -131,13 +131,14 @@ const PreviewContent = ({ profileName, profileId }: { profileName: string; profi
   });
   const topClients = Object.values(clientRevMap).sort((a, b) => b.rev - a.rev).slice(0, 5);
 
-  // Team member scoped metrics
-  const myTasks = tasks.filter((t) => t.assigned_to === profileId);
+  // Team member scoped metrics (uses selected member)
+  const scopeId = selectedMemberId;
+  const myTasks = tasks.filter((t) => t.assigned_to === scopeId);
   const myCompleted = myTasks.filter((t) => t.status === "completed").length;
   const myOverdue = myTasks.filter((t) => t.status === "overdue").length;
   const myPending = myTasks.filter((t) => t.status === "pending").length;
-  const myLeads = leads.filter((l) => l.assigned_to === profileId);
-  const myClients = clients.filter((c) => c.assigned_manager === profileId);
+  const myLeads = leads.filter((l) => l.assigned_to === scopeId);
+  const myClients = clients.filter((c) => c.assigned_manager === scopeId);
 
   const dateStr = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
