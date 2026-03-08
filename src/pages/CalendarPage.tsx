@@ -190,11 +190,13 @@ const CalendarPage = () => {
             return (
               <div
                 key={key}
+                onClick={() => canCreate && setNewTaskDate(day)}
                 className={cn(
                   "min-h-[100px] border-b border-r border-border/50 p-1.5 transition-colors",
                   !inMonth && "bg-background/50",
                   inMonth && "bg-card",
                   today && "bg-primary/[0.04]",
+                  canCreate && "cursor-pointer hover:bg-muted/40",
                   // Remove right border on last column
                   (idx + 1) % 7 === 0 && "border-r-0"
                 )}
