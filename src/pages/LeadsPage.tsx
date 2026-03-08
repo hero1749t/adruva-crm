@@ -73,7 +73,7 @@ const LeadsPage = () => {
             <Button variant="outline" size="sm" className="gap-2">
               <Download className="h-4 w-4" /> Export
             </Button>
-            <Button size="sm" className="gap-2">
+            <Button size="sm" className="gap-2" onClick={() => setDrawerOpen(true)}>
               <Plus className="h-4 w-4" /> New Lead
             </Button>
           </div>
