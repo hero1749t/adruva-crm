@@ -8,8 +8,11 @@ import {
   Check,
   X,
   Loader2,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,6 +46,7 @@ const priorityOptions: { value: TaskPriority; label: string; color: string }[] =
 ];
 
 const SettingsPage = () => {
+  const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -153,6 +157,39 @@ const SettingsPage = () => {
         <p className="mt-1 text-sm text-muted-foreground">
           Manage task templates and default configurations
         </p>
+      </div>
+
+      {/* Appearance Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="font-display text-xl font-semibold text-foreground">
+            Appearance
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Customize how the app looks
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-3">
+            {theme === "dark" ? (
+              <Moon className="h-5 w-5 text-primary" />
+            ) : (
+              <Sun className="h-5 w-5 text-warning" />
+            )}
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {theme === "dark" ? "Dark mode" : "Light mode"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {theme === "dark"
+                  ? "Switch to light mode for a brighter interface"
+                  : "Switch to dark mode for easier viewing in low light"}
+              </p>
+            </div>
+          </div>
+          <Switch checked={theme === "light"} onCheckedChange={toggleTheme} />
+        </div>
       </div>
 
       {/* Task Templates Section */}
