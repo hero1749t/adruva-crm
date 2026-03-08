@@ -182,14 +182,37 @@ const TeamPage = () => {
       logActivity({ entity: "team", entityId: data.userId, action: data.newStatus === "active" ? "member_reactivated" : "member_deactivated", metadata: { member_name: data.memberName } });
 
       // Send in-app notification to the affected user
-      await supabase.from("notifications").insert({
-        user_id: data.userId,
-        title: data.newStatus === "active" ? "Account Reactivated" : "Account Deactivated",
-        message: data.newStatus === "active" 
-          ? "Your account has been reactivated. You can now access the system."
-          : "Your account has been deactivated. Please contact an administrator for more information.",
-        type: data.newStatus === "active" ? "account_reactivated" : "account_deactivated",
-      });
+      const actionLabel = data.newStatus === "active" ? "Reactivated" : "Deactivated";
+      const notifications: Array<{ user_id: string; title: string; message: string; type: string }> = [
+        {
+          user_id: data.userId,
+          title: data.newStatus === "active" ? "Account Reactivated" : "Account Deactivated",
+          message: data.newStatus === "active"
+            ? "Your account has been reactivated. You can now access the system."
+            : "Your account has been deactivated. Please contact an administrator for more information.",
+          type: data.newStatus === "active" ? "account_reactivated" : "account_deactivated",
+        },
+      ];
+
+      // Notify all owners and admins (except the current user who performed the action)
+      const { data: admins } = await supabase
+        .from("profiles")
+        .select("id")
+        .in("role", ["owner", "admin"])
+        .neq("id", profile?.id ?? "");
+
+      if (admins) {
+        admins.forEach((admin) => {
+          notifications.push({
+            user_id: admin.id,
+            title: `Team Member ${actionLabel}`,
+            message: `${data.memberName} has been ${actionLabel.toLowerCase()} by ${profile?.name ?? "an owner"}.`,
+            type: data.newStatus === "active" ? "member_reactivated" : "member_deactivated",
+          });
+        });
+      }
+
+      await supabase.from("notifications").insert(notifications);
     },
     onError: (err: Error) => {
       toast({ title: "Failed to update status", description: err.message, variant: "destructive" });
