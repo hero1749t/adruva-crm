@@ -21,6 +21,7 @@ interface MonthViewProps {
   canCreate: boolean;
   canDrag: boolean;
   onDayClick: (day: Date) => void;
+  onDayDoubleClick?: (day: Date) => void;
 }
 
 const DroppableDay = ({
