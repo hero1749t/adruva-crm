@@ -28,6 +28,7 @@ import { logActivity } from "@/hooks/useActivityLog";
 const roleBadge: Record<string, string> = {
   owner: "bg-destructive/20 text-destructive",
   admin: "bg-primary/20 text-primary",
+  task_manager: "bg-warning/20 text-warning",
   team: "bg-success/20 text-success",
 };
 
