@@ -68,7 +68,49 @@ const SettingsPage = () => {
   const [newPriority, setNewPriority] = useState<TaskPriority>("medium");
   const [newDays, setNewDays] = useState(7);
 
-  const { data: templates = [], isLoading } = useQuery({
+  // Notification preferences
+  interface NotifPrefs {
+    due_tomorrow: boolean;
+    due_today: boolean;
+    overdue: boolean;
+  }
+
+  const defaultPrefs: NotifPrefs = { due_tomorrow: true, due_today: true, overdue: true };
+
+  const { data: notifPrefs = defaultPrefs } = useQuery({
+    queryKey: ["notification-preferences"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("notification_preferences")
+        .select("due_tomorrow, due_today, overdue")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return (data as NotifPrefs | null) || defaultPrefs;
+    },
+    enabled: !!user,
+  });
+
+  const updateNotifPref = useMutation({
+    mutationFn: async (updates: Partial<NotifPrefs>) => {
+      const merged = { ...notifPrefs, ...updates };
+      const { error } = await supabase
+        .from("notification_preferences")
+        .upsert(
+          { user_id: user!.id, ...merged, updated_at: new Date().toISOString() },
+          { onConflict: "user_id" }
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notification-preferences"] });
+      toast({ title: "Preferences saved" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+
     queryKey: ["task-templates"],
     queryFn: async () => {
       const { data } = await supabase
