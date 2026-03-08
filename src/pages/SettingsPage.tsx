@@ -52,6 +52,7 @@ const priorityOptions: { value: TaskPriority; label: string; color: string }[] =
 
 const SettingsPage = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
