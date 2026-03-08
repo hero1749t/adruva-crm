@@ -61,7 +61,7 @@ const TasksPage = () => {
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["tasks", statusFilter, priorityFilter, search, assignedFilter],
+    queryKey: ["tasks", statusFilter, priorityFilter, search, assignedFilter, dateFilter],
     queryFn: async () => {
       let query = supabase
         .from("tasks")
@@ -77,6 +77,28 @@ const TasksPage = () => {
         } else {
           query = query.eq("assigned_to", assignedFilter);
         }
+      }
+
+      if (dateFilter !== "all") {
+        const now = new Date();
+        let startDate = "";
+        let endDate = "";
+        if (dateFilter === "today") {
+          startDate = now.toISOString().split("T")[0];
+        } else if (dateFilter === "yesterday") {
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          startDate = yesterday.toISOString().split("T")[0];
+          endDate = now.toISOString().split("T")[0];
+        } else if (dateFilter === "this_week") {
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - now.getDay());
+          startDate = weekStart.toISOString().split("T")[0];
+        } else if (dateFilter === "this_month") {
+          startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+        }
+        if (startDate) query = query.gte("deadline", startDate);
+        if (endDate) query = query.lt("deadline", endDate);
       }
 
       const { data } = await query;
