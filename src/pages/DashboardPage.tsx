@@ -14,6 +14,7 @@ import {
   Shield,
   Trash2,
   TrendingDown,
+  CheckSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -171,6 +172,36 @@ const DashboardPage = () => {
     { month: "Mar", revenue: revenueThisMonth },
   ];
 
+  // Task completion over last 8 weeks
+  const taskCompletionData = (() => {
+    const weeks: { label: string; completed: number; pending: number; overdue: number }[] = [];
+    for (let w = 7; w >= 0; w--) {
+      const weekEnd = new Date(now);
+      weekEnd.setDate(weekEnd.getDate() - w * 7);
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 7);
+      const label = `${weekStart.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`;
+      const completed = tasks.filter((t) => {
+        if (t.status !== "completed" || !t.completed_at) return false;
+        const d = new Date(t.completed_at);
+        return d >= weekStart && d < weekEnd;
+      }).length;
+      const createdInWeek = tasks.filter((t) => {
+        if (!t.created_at) return false;
+        const d = new Date(t.created_at);
+        return d >= weekStart && d < weekEnd;
+      });
+      const pending = createdInWeek.filter((t) => t.status === "pending" || t.status === "in_progress").length;
+      const overdue = createdInWeek.filter((t) => t.status === "overdue").length;
+      weeks.push({ label, completed, pending, overdue });
+    }
+    return weeks;
+  })();
+
+  const totalCompleted = tasks.filter((t) => t.status === "completed").length;
+  const totalTasks = tasks.length;
+  const completionRate = totalTasks > 0 ? ((totalCompleted / totalTasks) * 100).toFixed(0) : "0";
+
   return (
     <div className="space-y-6">
       <div>
@@ -296,6 +327,42 @@ const DashboardPage = () => {
             })}
           </div>
         )}
+      </div>
+
+      {/* Task Completion Rate */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckSquare className="h-5 w-5 text-success" />
+            <div>
+              <h3 className="font-display text-base font-bold text-foreground">Task Completion Rate</h3>
+              <p className="text-xs text-muted-foreground">Weekly breakdown over last 8 weeks</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-lg bg-success/10 px-3 py-1.5">
+            <span className="text-lg font-bold text-success">{completionRate}%</span>
+            <span className="text-[10px] font-medium uppercase text-success/70">Overall</span>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={taskCompletionData} margin={{ left: -10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(213, 50%, 24%)" />
+            <XAxis dataKey="label" stroke="hsl(215, 25%, 53%)" fontSize={11} />
+            <YAxis stroke="hsl(215, 25%, 53%)" fontSize={12} allowDecimals={false} />
+            <Tooltip
+              contentStyle={{
+                background: "hsl(218, 49%, 13%)",
+                border: "1px solid hsl(213, 50%, 24%)",
+                borderRadius: 8,
+                color: "hsl(214, 32%, 91%)",
+              }}
+            />
+            <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+            <Bar dataKey="completed" stackId="a" fill="hsl(160, 84%, 39%)" radius={[0, 0, 0, 0]} name="Completed" />
+            <Bar dataKey="pending" stackId="a" fill="hsl(38, 92%, 50%)" radius={[0, 0, 0, 0]} name="Pending" />
+            <Bar dataKey="overdue" stackId="a" fill="hsl(0, 84%, 60%)" radius={[4, 4, 0, 0]} name="Overdue" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Recent Team Activity */}
