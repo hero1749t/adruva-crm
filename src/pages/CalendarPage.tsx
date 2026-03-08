@@ -98,7 +98,7 @@ const CalendarPage = () => {
   }, [tasks]);
 
   const reschedule = useMutation({
-    mutationFn: async ({ taskId, newDate }: { taskId: string; newDate: Date }) => {
+    mutationFn: async ({ taskId, newDate }: { taskId: string; newDate: Date; oldDate: Date }) => {
       const { error } = await supabase
         .from("tasks")
         .update({ deadline: newDate.toISOString() })
