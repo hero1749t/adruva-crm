@@ -237,7 +237,7 @@ const TasksPage = () => {
           <Input
             placeholder="Search tasks..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="h-9 border-border bg-muted/30 pl-9 text-sm"
           />
         </div>
