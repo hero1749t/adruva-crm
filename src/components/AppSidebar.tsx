@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Calendar,
   UsersRound,
+  ShieldCheck,
   Settings,
   ScrollText,
   ChevronLeft,
