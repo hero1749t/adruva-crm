@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Trash2, UserPlus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,12 +10,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { logActivity } from "@/hooks/useActivityLog";
 import NewLeadDrawer from "@/components/NewLeadDrawer";
 import ImportLeadsDialog from "@/components/ImportLeadsDialog";
 import { exportLeadsCsv } from "@/lib/csv-utils";
+import { cn } from "@/lib/utils";
 
 const leadStatusConfig: Record<string, { label: string; color: string }> = {
   new_lead: { label: "New Lead", color: "bg-muted text-muted-foreground" },
@@ -32,10 +46,17 @@ const LeadsPage = () => {
   const [page, setPage] = useState(1);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bulkAssignTo, setBulkAssignTo] = useState("");
   const perPage = 20;
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
+  const isOwner = profile?.role === "owner";
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", statusFilter, search],
@@ -58,8 +79,110 @@ const LeadsPage = () => {
     },
   });
 
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["team-members"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, name, role")
+        .eq("status", "active")
+        .order("name");
+      return data || [];
+    },
+  });
+
   const totalPages = Math.ceil(leads.length / perPage);
   const paged = leads.slice((page - 1) * perPage, page * perPage);
+  const allPageSelected = paged.length > 0 && paged.every((l) => selected.has(l.id));
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (allPageSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        paged.forEach((l) => next.delete(l.id));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        paged.forEach((l) => next.add(l.id));
+        return next;
+      });
+    }
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkAssign = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selected);
+      const { error } = await supabase
+        .from("leads")
+        .update({ assigned_to: bulkAssignTo || null })
+        .in("id", ids);
+      if (error) throw error;
+      for (const id of ids) {
+        const lead = leads.find((l) => l.id === id);
+        logActivity({
+          entity: "lead",
+          entityId: id,
+          action: "assigned",
+          metadata: {
+            name: lead?.name,
+            to: teamMembers.find((m) => m.id === bulkAssignTo)?.name || "Unassigned",
+          },
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast({ title: `${selected.size} lead(s) reassigned` });
+      clearSelection();
+      setAssignDialogOpen(false);
+      setBulkAssignTo("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Assign failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const bulkDelete = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selected);
+      const { error } = await supabase
+        .from("leads")
+        .update({ is_deleted: true })
+        .in("id", ids);
+      if (error) throw error;
+      for (const id of ids) {
+        const lead = leads.find((l) => l.id === id);
+        logActivity({
+          entity: "lead",
+          entityId: id,
+          action: "deleted",
+          metadata: { name: lead?.name },
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast({ title: `${selected.size} lead(s) deleted` });
+      clearSelection();
+      setDeleteDialogOpen(false);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -82,6 +205,40 @@ const LeadsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 animate-in fade-in slide-in-from-top-2">
+          <span className="text-sm font-medium text-foreground">
+            {selected.size} lead{selected.size !== 1 ? "s" : ""} selected
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            {isOwnerOrAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setAssignDialogOpen(true)}
+              >
+                <UserPlus className="h-4 w-4" /> Assign
+              </Button>
+            )}
+            {isOwner && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-64">
@@ -110,6 +267,15 @@ const LeadsPage = () => {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface">
+              {isOwnerOrAdmin && (
+                <th className="w-10 px-3 py-3">
+                  <Checkbox
+                    checked={allPageSelected && paged.length > 0}
+                    onCheckedChange={toggleAll}
+                    aria-label="Select all"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Name</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Company</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Phone</th>
@@ -123,7 +289,7 @@ const LeadsPage = () => {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-border/50">
-                  {Array.from({ length: 7 }).map((_, j) => (
+                  {Array.from({ length: isOwnerOrAdmin ? 8 : 7 }).map((_, j) => (
                     <td key={j} className="px-4 py-3">
                       <div className="h-4 w-24 animate-pulse rounded bg-muted" />
                     </td>
@@ -132,7 +298,7 @@ const LeadsPage = () => {
               ))
             ) : paged.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={isOwnerOrAdmin ? 8 : 7} className="px-4 py-12 text-center text-muted-foreground">
                   No leads found
                 </td>
               </tr>
@@ -140,8 +306,25 @@ const LeadsPage = () => {
               paged.map((lead) => {
                 const statusConf = leadStatusConfig[lead.status] || leadStatusConfig.new_lead;
                 const assignedName = (lead as any).profiles?.name || "Unassigned";
+                const isSelected = selected.has(lead.id);
                 return (
-                  <tr key={lead.id} className="border-b border-border/50 transition-colors hover:bg-primary/[0.03] cursor-pointer" onClick={() => navigate(`/leads/${lead.id}`)}>
+                  <tr
+                    key={lead.id}
+                    className={cn(
+                      "border-b border-border/50 transition-colors cursor-pointer",
+                      isSelected ? "bg-primary/[0.06]" : "hover:bg-primary/[0.03]"
+                    )}
+                    onClick={() => navigate(`/leads/${lead.id}`)}
+                  >
+                    {isOwnerOrAdmin && (
+                      <td className="w-10 px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(lead.id)}
+                          aria-label={`Select ${lead.name}`}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3 font-medium text-foreground">{lead.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.company_name || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.phone}</td>
@@ -177,6 +360,61 @@ const LeadsPage = () => {
 
       <NewLeadDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
       <ImportLeadsDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      {/* Bulk Assign Dialog */}
+      <AlertDialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Assign {selected.size} lead{selected.size !== 1 ? "s" : ""}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select a team member to assign the selected leads to.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Select value={bulkAssignTo} onValueChange={setBulkAssignTo}>
+            <SelectTrigger className="w-full border-border">
+              <SelectValue placeholder="Select team member" />
+            </SelectTrigger>
+            <SelectContent>
+              {teamMembers.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.name} ({m.role})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBulkAssignTo("")}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!bulkAssignTo || bulkAssign.isPending}
+              onClick={(e) => { e.preventDefault(); bulkAssign.mutate(); }}
+            >
+              {bulkAssign.isPending ? "Assigning..." : "Assign"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selected.size} lead{selected.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will soft-delete the selected leads. They will no longer appear in the leads list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={bulkDelete.isPending}
+              onClick={(e) => { e.preventDefault(); bulkDelete.mutate(); }}
+            >
+              {bulkDelete.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
