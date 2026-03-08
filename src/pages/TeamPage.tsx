@@ -111,7 +111,7 @@ const TeamPage = () => {
   });
 
   const deleteMember = useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async ({ userId, memberName }: { userId: string; memberName: string }) => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
@@ -130,12 +130,13 @@ const TeamPage = () => {
 
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to delete user");
-      return result;
+      return { ...result, memberName, userId };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["team"] });
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       toast({ title: "Team member deleted" });
+      logActivity({ entity: "team", entityId: data.userId, action: "member_deleted", metadata: { member_name: data.memberName } });
     },
     onError: (err: Error) => {
       toast({ title: "Failed to delete user", description: err.message, variant: "destructive" });
