@@ -184,7 +184,8 @@ const LogsPage = () => {
       </div>
 
       {/* Log entries */}
-      <div className="rounded-xl border border-border overflow-hidden">
+      <div className="rounded-xl border border-border overflow-x-auto">
+        <div className="min-w-[700px]">
         {/* Header */}
         <div className="grid grid-cols-[1fr_120px_120px_180px_1fr] gap-2 border-b border-border bg-surface px-4 py-2.5">
           <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
