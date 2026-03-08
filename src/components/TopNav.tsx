@@ -1,7 +1,8 @@
-import { Bell, LogOut, Search } from "lucide-react";
+import { LogOut, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { NotificationDropdown } from "@/components/NotificationDropdown";
 
 const roleBadgeVariant: Record<string, string> = {
   owner: "bg-destructive/20 text-destructive",
