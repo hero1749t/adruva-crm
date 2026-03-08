@@ -99,7 +99,12 @@ const LeadDetailPage = () => {
       const { error } = await supabase.from("leads").update(updates).eq("id", id!);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, updates) => {
+      if (updates.status) {
+        logActivity({ entity: "lead", entityId: id!, action: "status_changed", metadata: { name: lead?.name, to: updates.status } });
+      } else {
+        logActivity({ entity: "lead", entityId: id!, action: "updated", metadata: { name: lead?.name } });
+      }
       queryClient.invalidateQueries({ queryKey: ["lead", id] });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast({ title: "Lead updated" });

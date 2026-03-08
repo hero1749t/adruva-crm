@@ -87,7 +87,7 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
 
   const createLead = useMutation({
     mutationFn: async (values: LeadFormValues) => {
-      const { error } = await supabase.from("leads").insert({
+      const { data, error } = await supabase.from("leads").insert({
         name: values.name.trim(),
         email: values.email.trim(),
         phone: values.phone.trim(),
@@ -96,10 +96,12 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
         service_interest: values.service_interest?.trim() || null,
         assigned_to: values.assigned_to || null,
         notes: values.notes?.trim() || null,
-      });
+      }).select("id").single();
       if (error) throw error;
+      return { id: data.id, name: values.name.trim() };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      logActivity({ entity: "lead", entityId: result.id, action: "created", metadata: { name: result.name } });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast({ title: "Lead created successfully" });
       reset();

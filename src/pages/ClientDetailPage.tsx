@@ -103,6 +103,7 @@ const ClientDetailPage = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      logActivity({ entity: "client", entityId: id!, action: "updated", metadata: { name: client?.client_name } });
       queryClient.invalidateQueries({ queryKey: ["client", id] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       toast({ title: "Client updated" });
