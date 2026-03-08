@@ -1,100 +1,66 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import {
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  Plus,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   addMonths,
   subMonths,
+  addWeeks,
+  subWeeks,
   startOfMonth,
   endOfMonth,
   startOfWeek,
   endOfWeek,
-  eachDayOfInterval,
   format,
   isSameMonth,
-  isSameDay,
-  isToday,
   parseISO,
 } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import NewTaskDialog from "@/components/NewTaskDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import NewTaskDialog from "@/components/NewTaskDialog";
+import { priorityConfig, type CalendarTask } from "@/components/calendar/calendar-config";
+import MonthView from "@/components/calendar/MonthView";
+import WeekView from "@/components/calendar/WeekView";
 
-const priorityConfig: Record<string, { dot: string; label: string }> = {
-  urgent: { dot: "bg-destructive", label: "Urgent" },
-  high: { dot: "bg-warning", label: "High" },
-  medium: { dot: "bg-primary", label: "Medium" },
-  low: { dot: "bg-muted-foreground", label: "Low" },
-};
-
-const statusIcon: Record<string, React.ReactNode> = {
-  completed: <CheckCircle2 className="h-3 w-3 text-success shrink-0" />,
-  overdue: <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />,
-  in_progress: <Clock className="h-3 w-3 text-warning shrink-0" />,
-  pending: <Clock className="h-3 w-3 text-muted-foreground shrink-0" />,
-};
-
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-interface Task {
-  id: string;
-  task_title: string;
-  deadline: string;
-  priority: string | null;
-  status: string | null;
-  client_id: string;
-  assigned_to: string | null;
-  clients?: { client_name: string } | null;
-  profiles?: { name: string } | null;
-}
+type ViewMode = "month" | "week";
 
 const CalendarPage = () => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
-  const navigate = useNavigate();
   const { profile } = useAuth();
   const canCreate = profile?.role === "owner" || profile?.role === "admin";
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
+  // Compute query range based on view
+  const queryRange = useMemo(() => {
+    if (viewMode === "month") {
+      return {
+        start: startOfWeek(startOfMonth(currentDate)),
+        end: endOfWeek(endOfMonth(currentDate)),
+      };
+    }
+    return {
+      start: startOfWeek(currentDate),
+      end: endOfWeek(currentDate),
+    };
+  }, [currentDate, viewMode]);
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ["calendar-tasks", format(monthStart, "yyyy-MM")],
+    queryKey: ["calendar-tasks", viewMode, format(queryRange.start, "yyyy-MM-dd")],
     queryFn: async () => {
-      const calStart = startOfWeek(monthStart);
-      const calEnd = endOfWeek(monthEnd);
       const { data } = await supabase
         .from("tasks")
         .select("*, clients!tasks_client_id_fkey(client_name), profiles!tasks_assigned_to_fkey(name)")
-        .gte("deadline", calStart.toISOString())
-        .lte("deadline", calEnd.toISOString())
+        .gte("deadline", queryRange.start.toISOString())
+        .lte("deadline", queryRange.end.toISOString())
         .order("deadline");
-      return (data || []) as Task[];
+      return (data || []) as CalendarTask[];
     },
   });
 
-  const calendarDays = useMemo(() => {
-    const start = startOfWeek(monthStart);
-    const end = endOfWeek(monthEnd);
-    return eachDayOfInterval({ start, end });
-  }, [currentMonth]);
-
   const tasksByDate = useMemo(() => {
-    const map = new Map<string, Task[]>();
+    const map = new Map<string, CalendarTask[]>();
     tasks.forEach((task) => {
       const key = format(parseISO(task.deadline), "yyyy-MM-dd");
       if (!map.has(key)) map.set(key, []);
@@ -103,13 +69,27 @@ const CalendarPage = () => {
     return map;
   }, [tasks]);
 
-  // Stats for the month
-  const monthTasks = tasks.filter((t) => {
-    const d = parseISO(t.deadline);
-    return isSameMonth(d, currentMonth);
-  });
-  const completedCount = monthTasks.filter((t) => t.status === "completed").length;
-  const overdueCount = monthTasks.filter((t) => t.status === "overdue").length;
+  // Stats
+  const visibleTasks = viewMode === "month"
+    ? tasks.filter((t) => isSameMonth(parseISO(t.deadline), currentDate))
+    : tasks;
+  const completedCount = visibleTasks.filter((t) => t.status === "completed").length;
+  const overdueCount = visibleTasks.filter((t) => t.status === "overdue").length;
+
+  // Navigation
+  const goBack = () =>
+    setCurrentDate(viewMode === "month" ? subMonths(currentDate, 1) : subWeeks(currentDate, 1));
+  const goForward = () =>
+    setCurrentDate(viewMode === "month" ? addMonths(currentDate, 1) : addWeeks(currentDate, 1));
+  const goToday = () => setCurrentDate(new Date());
+
+  const headerLabel =
+    viewMode === "month"
+      ? format(currentDate, "MMMM yyyy")
+      : `${format(startOfWeek(currentDate), "MMM d")} – ${format(endOfWeek(currentDate), "MMM d, yyyy")}`;
+
+  const statsLabel =
+    viewMode === "month" ? "this month" : "this week";
 
   return (
     <div className="space-y-6">
@@ -120,34 +100,46 @@ const CalendarPage = () => {
             Calendar
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {monthTasks.length} tasks this month · {completedCount} done · {overdueCount} overdue
+            {visibleTasks.length} tasks {statsLabel} · {completedCount} done · {overdueCount} overdue
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentMonth(new Date())}
-          >
+          {/* View toggle */}
+          <div className="flex rounded-lg border border-border bg-surface p-0.5">
+            <button
+              onClick={() => setViewMode("month")}
+              className={cn(
+                "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                viewMode === "month"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setViewMode("week")}
+              className={cn(
+                "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                viewMode === "week"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Week
+            </button>
+          </div>
+
+          <Button variant="outline" size="sm" onClick={goToday}>
             Today
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-          >
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={goBack}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="min-w-[160px] text-center font-display text-lg font-semibold text-foreground">
-            {format(currentMonth, "MMMM yyyy")}
+          <span className="min-w-[200px] text-center font-display text-lg font-semibold text-foreground">
+            {headerLabel}
           </span>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-          >
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={goForward}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -165,129 +157,22 @@ const CalendarPage = () => {
         ))}
       </div>
 
-      {/* Calendar grid */}
-      <div className="overflow-hidden rounded-xl border border-border">
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 border-b border-border bg-surface">
-          {WEEKDAYS.map((day) => (
-            <div
-              key={day}
-              className="px-2 py-2 text-center font-mono text-[10px] font-medium uppercase tracking-widest text-primary"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Day cells */}
-        <div className="grid grid-cols-7">
-          {calendarDays.map((day, idx) => {
-            const key = format(day, "yyyy-MM-dd");
-            const dayTasks = tasksByDate.get(key) || [];
-            const inMonth = isSameMonth(day, currentMonth);
-            const today = isToday(day);
-
-            return (
-              <div
-                key={key}
-                onClick={() => canCreate && setNewTaskDate(day)}
-                className={cn(
-                  "group min-h-[100px] border-b border-r border-border/50 p-1.5 transition-colors",
-                  !inMonth && "bg-background/50",
-                  inMonth && "bg-card",
-                  today && "bg-primary/[0.04]",
-                  canCreate && "cursor-pointer hover:bg-muted/40",
-                  // Remove right border on last column
-                  (idx + 1) % 7 === 0 && "border-r-0"
-                )}
-              >
-                {/* Day number */}
-                <div className="mb-1 flex items-center justify-between">
-                  <span
-                    className={cn(
-                      "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
-                      today
-                        ? "bg-primary text-primary-foreground"
-                        : inMonth
-                        ? "text-foreground"
-                        : "text-muted-foreground/50"
-                    )}
-                  >
-                    {format(day, "d")}
-                  </span>
-                  {dayTasks.length > 0 ? (
-                    <span className="font-mono text-[9px] text-muted-foreground">
-                      {dayTasks.length}
-                    </span>
-                  ) : canCreate ? (
-                    <Plus className="h-3.5 w-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  ) : null}
-                </div>
-
-                {/* Task pills */}
-                <div className="space-y-0.5">
-                  {dayTasks.slice(0, 3).map((task) => {
-                    const prio = priorityConfig[task.priority || "medium"];
-                    return (
-                      <Tooltip key={task.id}>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => navigate(`/clients/${task.client_id}`)}
-                            className={cn(
-                              "flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-left text-[10px] leading-tight transition-colors",
-                              "hover:bg-muted/80",
-                              task.status === "completed"
-                                ? "text-muted-foreground line-through opacity-60"
-                                : "text-foreground"
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full",
-                                prio.dot
-                              )}
-                            />
-                            <span className="truncate">{task.task_title}</span>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          className="max-w-[220px] space-y-1 text-xs"
-                        >
-                          <p className="font-medium">{task.task_title}</p>
-                          <div className="flex items-center gap-1.5">
-                            {statusIcon[task.status || "pending"]}
-                            <span className="capitalize">
-                              {(task.status || "pending").replace("_", " ")}
-                            </span>
-                            <span className="text-muted-foreground">·</span>
-                            <span className="capitalize">{prio.label}</span>
-                          </div>
-                          {(task as any).clients?.client_name && (
-                            <p className="text-muted-foreground">
-                              {(task as any).clients.client_name}
-                            </p>
-                          )}
-                          {(task as any).profiles?.name && (
-                            <p className="text-muted-foreground">
-                              → {(task as any).profiles.name}
-                            </p>
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-                  {dayTasks.length > 3 && (
-                    <span className="block px-1.5 font-mono text-[9px] text-muted-foreground">
-                      +{dayTasks.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* Views */}
+      {viewMode === "month" ? (
+        <MonthView
+          currentMonth={currentDate}
+          tasksByDate={tasksByDate}
+          canCreate={canCreate}
+          onDayClick={setNewTaskDate}
+        />
+      ) : (
+        <WeekView
+          currentWeekDate={currentDate}
+          tasksByDate={tasksByDate}
+          canCreate={canCreate}
+          onDayClick={setNewTaskDate}
+        />
+      )}
 
       {newTaskDate && (
         <NewTaskDialog
