@@ -1,6 +1,15 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import {
   addMonths,
   subMonths,
@@ -18,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import NewTaskDialog from "@/components/NewTaskDialog";
 import { priorityConfig, type CalendarTask } from "@/components/calendar/calendar-config";
 import MonthView from "@/components/calendar/MonthView";
@@ -29,8 +39,16 @@ const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
+  const [activeTask, setActiveTask] = useState<CalendarTask | null>(null);
   const { profile } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const canCreate = profile?.role === "owner" || profile?.role === "admin";
+
+  // DnD sensors — require 5px movement before drag starts to allow clicks
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   // Compute query range based on view
   const queryRange = useMemo(() => {
@@ -69,10 +87,56 @@ const CalendarPage = () => {
     return map;
   }, [tasks]);
 
+  // Reschedule mutation
+  const reschedule = useMutation({
+    mutationFn: async ({ taskId, newDate }: { taskId: string; newDate: Date }) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ deadline: newDate.toISOString() })
+        .eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { newDate }) => {
+      toast({
+        title: "Task rescheduled",
+        description: `Moved to ${format(newDate, "MMM d, yyyy")}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error rescheduling", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveTask(event.active.data.current?.task || null);
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveTask(null);
+      const { active, over } = event;
+      if (!over || !active.data.current?.task) return;
+
+      const task = active.data.current.task as CalendarTask;
+      const newDate = over.data.current?.date as Date | undefined;
+      if (!newDate) return;
+
+      const oldKey = format(parseISO(task.deadline), "yyyy-MM-dd");
+      const newKey = format(newDate, "yyyy-MM-dd");
+      if (oldKey === newKey) return;
+
+      reschedule.mutate({ taskId: task.id, newDate });
+    },
+    [reschedule]
+  );
+
   // Stats
-  const visibleTasks = viewMode === "month"
-    ? tasks.filter((t) => isSameMonth(parseISO(t.deadline), currentDate))
-    : tasks;
+  const visibleTasks =
+    viewMode === "month"
+      ? tasks.filter((t) => isSameMonth(parseISO(t.deadline), currentDate))
+      : tasks;
   const completedCount = visibleTasks.filter((t) => t.status === "completed").length;
   const overdueCount = visibleTasks.filter((t) => t.status === "overdue").length;
 
@@ -88,8 +152,7 @@ const CalendarPage = () => {
       ? format(currentDate, "MMMM yyyy")
       : `${format(startOfWeek(currentDate), "MMM d")} – ${format(endOfWeek(currentDate), "MMM d, yyyy")}`;
 
-  const statsLabel =
-    viewMode === "month" ? "this month" : "this week";
+  const statsLabel = viewMode === "month" ? "this month" : "this week";
 
   return (
     <div className="space-y-6">
@@ -104,7 +167,6 @@ const CalendarPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* View toggle */}
           <div className="flex rounded-lg border border-border bg-surface p-0.5">
             <button
               onClick={() => setViewMode("month")}
@@ -157,22 +219,34 @@ const CalendarPage = () => {
         ))}
       </div>
 
-      {/* Views */}
-      {viewMode === "month" ? (
-        <MonthView
-          currentMonth={currentDate}
-          tasksByDate={tasksByDate}
-          canCreate={canCreate}
-          onDayClick={setNewTaskDate}
-        />
-      ) : (
-        <WeekView
-          currentWeekDate={currentDate}
-          tasksByDate={tasksByDate}
-          canCreate={canCreate}
-          onDayClick={setNewTaskDate}
-        />
-      )}
+      {/* Views with DnD */}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        {viewMode === "month" ? (
+          <MonthView
+            currentMonth={currentDate}
+            tasksByDate={tasksByDate}
+            canCreate={canCreate}
+            canDrag={canCreate}
+            onDayClick={setNewTaskDate}
+          />
+        ) : (
+          <WeekView
+            currentWeekDate={currentDate}
+            tasksByDate={tasksByDate}
+            canCreate={canCreate}
+            canDrag={canCreate}
+            onDayClick={setNewTaskDate}
+          />
+        )}
+
+        <DragOverlay>
+          {activeTask && (
+            <div className="rounded bg-card px-2 py-1 text-xs font-medium text-foreground shadow-lg ring-1 ring-primary/30">
+              {activeTask.task_title}
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
 
       {newTaskDate && (
         <NewTaskDialog
