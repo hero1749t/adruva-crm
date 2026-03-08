@@ -252,7 +252,7 @@ const TasksPage = () => {
             ))}
           </SelectContent>
         </Select>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+        <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setPage(1); }}>
           <SelectTrigger className="h-9 w-36 border-border bg-muted/30 text-sm">
             <SelectValue placeholder="Priority" />
           </SelectTrigger>
