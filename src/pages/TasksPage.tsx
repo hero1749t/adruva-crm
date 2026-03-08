@@ -26,6 +26,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/hooks/useActivityLog";
 import { cn } from "@/lib/utils";
+import TaskDetailDrawer from "@/components/TaskDetailDrawer";
 
 const taskPriorityConfig: Record<string, { label: string; color: string }> = {
   urgent: { label: "Urgent", color: "bg-destructive/20 text-destructive" },
@@ -52,6 +53,7 @@ const TasksPage = () => {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [bulkAssignTo, setBulkAssignTo] = useState("");
+  const [detailTask, setDetailTask] = useState<any | null>(null);
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -341,6 +343,7 @@ const TasksPage = () => {
                       isOverdue && "border-l-2 border-l-destructive",
                       isSelected ? "bg-primary/[0.06]" : "hover:bg-primary/[0.03]"
                     )}
+                    onClick={() => setDetailTask(task)}
                   >
                     {isOwnerOrAdmin && (
                       <td className="w-10 px-3 py-3" onClick={(e) => e.stopPropagation()}>
@@ -440,6 +443,12 @@ const TasksPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TaskDetailDrawer
+        task={detailTask}
+        open={!!detailTask}
+        onOpenChange={(open) => { if (!open) setDetailTask(null); }}
+      />
     </div>
   );
 };
