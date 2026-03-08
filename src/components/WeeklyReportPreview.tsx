@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, X } from "lucide-react";
+import { Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,8 @@ import {
 
 const fmtINR = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
+
+type ViewMode = "owner" | "team";
 
 export const WeeklyReportPreviewButton = () => {
   const { profile } = useAuth();
@@ -41,6 +44,8 @@ export const WeeklyReportPreviewButton = () => {
 };
 
 const PreviewContent = ({ profileName, profileId }: { profileName: string; profileId: string }) => {
+  const [viewMode, setViewMode] = useState<ViewMode>("owner");
+
   const { data, isLoading } = useQuery({
     queryKey: ["weekly-report-preview"],
     queryFn: async () => {
@@ -69,6 +74,7 @@ const PreviewContent = ({ profileName, profileId }: { profileName: string; profi
 
   const { invoices, tasks, clients, leads } = data!;
 
+  // Global metrics (shown in both views)
   const paidInvoices = invoices.filter((i) => i.status === "paid");
   const totalRevenue = paidInvoices.reduce((s, i) => s + (i.total_amount || 0), 0);
   const outstanding = invoices
@@ -102,10 +108,28 @@ const PreviewContent = ({ profileName, profileId }: { profileName: string; profi
   });
   const topClients = Object.values(clientRevMap).sort((a, b) => b.rev - a.rev).slice(0, 5);
 
+  // Team member scoped metrics
+  const myTasks = tasks.filter((t) => t.assigned_to === profileId);
+  const myCompleted = myTasks.filter((t) => t.status === "completed").length;
+  const myOverdue = myTasks.filter((t) => t.status === "overdue").length;
+  const myPending = myTasks.filter((t) => t.status === "pending").length;
+  const myLeads = leads.filter((l) => l.assigned_to === profileId);
+  const myClients = clients.filter((c) => c.assigned_manager === profileId);
+
   const dateStr = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
   return (
     <div className="p-4">
+      {/* View Toggle */}
+      <div className="flex justify-center mb-4">
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+          <TabsList>
+            <TabsTrigger value="owner">Owner / Admin View</TabsTrigger>
+            <TabsTrigger value="team">Team Member View</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       <div className="rounded-xl overflow-hidden border border-border" style={{ background: "#0b1120" }}>
         <div className="p-4" style={{ maxWidth: 620, margin: "0 auto" }}>
 
@@ -189,6 +213,21 @@ const PreviewContent = ({ profileName, profileId }: { profileName: string; profi
                 </div>
               </>
             )}
+
+            {/* Team Member Scoped Section (only in team view) */}
+            {viewMode === "team" && (
+              <div className="rounded-xl p-5 mt-2" style={{ background: "#1e293b", border: "1px solid #1e3a5f" }}>
+                <div className="font-mono text-[10px] font-medium uppercase tracking-[2px] mb-4" style={{ color: "#fbbf24" }}>
+                  Your Summary
+                </div>
+                <MetricRow label="Your Tasks" value={String(myTasks.length)} color="#f1f5f9" />
+                <MetricRow label="Completed" value={String(myCompleted)} color="#34d399" border />
+                <MetricRow label="Pending" value={String(myPending)} color="#fbbf24" border />
+                <MetricRow label="Overdue" value={String(myOverdue)} color="#f87171" border />
+                <MetricRow label="Assigned Leads" value={String(myLeads.length)} color="#60a5fa" border />
+                <MetricRow label="Managed Clients" value={String(myClients.length)} color="#22d3ee" border />
+              </div>
+            )}
           </div>
 
           {/* Footer */}
@@ -198,7 +237,11 @@ const PreviewContent = ({ profileName, profileId }: { profileName: string; profi
 
         </div>
       </div>
-      <p className="text-xs text-muted-foreground text-center mt-3">This is a live preview using your current data. The actual email will look identical.</p>
+      <p className="text-xs text-muted-foreground text-center mt-3">
+        {viewMode === "owner"
+          ? "Owner/Admin view — shows global metrics only."
+          : "Team member view — includes a personal \"Your Summary\" section at the bottom."}
+      </p>
     </div>
   );
 };
