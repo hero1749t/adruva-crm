@@ -481,6 +481,7 @@ const SettingsPage = () => {
               );
             })
           )}
+          </div>
         </div>
 
         {/* Info box */}
