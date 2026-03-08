@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   ArrowLeft, Phone, Mail, Building2, Calendar, IndianRupee,
-  Check, X, Pencil, Loader2, ExternalLink,
+  Check, X, Pencil, Loader2, ExternalLink, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
