@@ -76,6 +76,7 @@ const LogsPage = () => {
   const [search, setSearch] = useState("");
   const [entityFilter, setEntityFilter] = useState("all");
   const [actionFilter, setActionFilter] = useState("all");
+  const navigate = useNavigate();
 
   const { data: logs = [], isLoading, refetch } = useQuery({
     queryKey: ["activity-logs", entityFilter, actionFilter],
