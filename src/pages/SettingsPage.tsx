@@ -43,6 +43,7 @@ import { WeeklyReportPreviewButton } from "@/components/WeeklyReportPreview";
 import { IntegrationsSettings } from "@/components/settings/IntegrationsSettings";
 import { ServiceTemplatesSettings } from "@/components/settings/ServiceTemplatesSettings";
 import { AutomationEngineSettings } from "@/components/settings/AutomationEngineSettings";
+import { PaymentGatewaySettings } from "@/components/settings/PaymentGatewaySettings";
 
 type TaskPriority = Database["public"]["Enums"]["task_priority"];
 
@@ -1052,6 +1053,9 @@ const SettingsPage = () => {
 
       {/* Service Templates */}
       <ServiceTemplatesSettings />
+
+      {/* Payment Gateway */}
+      <PaymentGatewaySettings />
 
       {/* Integrations */}
       <IntegrationsSettings />
