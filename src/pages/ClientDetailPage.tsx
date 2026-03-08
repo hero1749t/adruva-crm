@@ -22,6 +22,7 @@ import HealthScoreBadge from "@/components/HealthScoreBadge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { CommunicationLog } from "@/components/CommunicationLog";
 import { ClientAIInsights } from "@/components/ClientAIInsights";
+import { ApplyServiceTemplateDialog } from "@/components/ApplyServiceTemplateDialog";
 
 type ClientStatus = Database["public"]["Enums"]["client_status"];
 type BillingStatus = Database["public"]["Enums"]["billing_status"];
@@ -437,6 +438,13 @@ const ClientDetailPage = () => {
               <h2 className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
                 Tasks ({completedTasks}/{totalTasks} completed)
               </h2>
+              {isOwnerOrAdmin && (
+                <ApplyServiceTemplateDialog
+                  clientId={id!}
+                  clientName={client.client_name}
+                  assignedManager={client.assigned_manager}
+                />
+              )}
             </div>
 
             {totalTasks > 0 && (
