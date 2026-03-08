@@ -194,9 +194,10 @@ const ReportsPage = () => {
   }, [filteredInvoices, clients]);
 
   /* ── monthly new clients ── */
+  const filteredClients = useMemo(() => clients.filter((c) => inRange(c.start_date)), [clients, startDate, endDate]);
   const monthlyClients = useMemo(() => {
     const map: Record<string, number> = {};
-    clients.forEach((c) => {
+    filteredClients.forEach((c) => {
       const month = (c.start_date || "").slice(0, 7);
       if (!month) return;
       map[month] = (map[month] || 0) + 1;
@@ -205,7 +206,7 @@ const ReportsPage = () => {
       .sort(([a], [b]) => a.localeCompare(b))
       .slice(-12)
       .map(([month, count]) => ({ label: monthLabel(month), clients: count }));
-  }, [clients]);
+  }, [filteredClients]);
 
   const customTooltipStyle = {
     backgroundColor: "hsl(218, 49%, 13%)",
