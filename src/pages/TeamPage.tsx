@@ -310,6 +310,26 @@ const TeamPage = () => {
                   </SelectContent>
                 </Select>
               </div>
+              {customRoles.filter((r) => !r.is_system || r.name !== "Owner").length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                    Permission Role
+                  </label>
+                  <Select value={formData.customRoleId} onValueChange={(v) => updateField("customRoleId", v)}>
+                    <SelectTrigger className="border-border bg-muted/30">
+                      <SelectValue placeholder="Select permission role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customRoles
+                        .filter((r) => r.name !== "Owner")
+                        .map((r) => (
+                          <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">Assign granular permissions via a custom role</p>
+                </div>
+              )}
               <Button
                 className="w-full gap-2"
                 onClick={() => createMember.mutate()}
