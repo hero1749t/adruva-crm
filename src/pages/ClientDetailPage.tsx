@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { useClientHealthScore } from "@/hooks/useClientHealthScore";
 import HealthScoreBadge from "@/components/HealthScoreBadge";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 
 type ClientStatus = Database["public"]["Enums"]["client_status"];
 type BillingStatus = Database["public"]["Enums"]["billing_status"];
@@ -338,6 +339,9 @@ const ClientDetailPage = () => {
               <InfoRow icon={Calendar} label="Contract End" field="contract_end_date" value={client.contract_end_date} />
             </div>
           </div>
+
+          {/* Onboarding Checklist */}
+          <OnboardingChecklist clientId={id!} clientName={client.client_name} />
         </div>
 
         {/* Right Panel — Tasks */}

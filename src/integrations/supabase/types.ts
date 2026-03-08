@@ -299,6 +299,93 @@ export type Database = {
           },
         ]
       }
+      onboarding_checklist_items: {
+        Row: {
+          client_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_completed: boolean | null
+          sort_order: number | null
+          template_id: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_completed?: boolean | null
+          sort_order?: number | null
+          template_id?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_completed?: boolean | null
+          sort_order?: number | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_checklist_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_checklist_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null

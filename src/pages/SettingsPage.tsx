@@ -37,6 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
+import { OnboardingTemplatesSection } from "@/components/OnboardingChecklist";
 
 type TaskPriority = Database["public"]["Enums"]["task_priority"];
 
@@ -68,6 +69,7 @@ const describeSchedule = (schedule: string): string => {
     "0 * * * *": "Every hour",
     "*/30 * * * *": "Every 30 minutes",
     "30 2 * * *": "Daily at 8:00 AM IST",
+    "35 2 * * *": "Daily at 8:05 AM IST",
     "0 7 * * *": "Daily at 12:30 PM IST",
     "* * * * *": "Every minute",
   };
@@ -1000,6 +1002,9 @@ const SettingsPage = () => {
           </ul>
         </div>
       </div>
+
+      {/* Onboarding Checklist Templates */}
+      <OnboardingTemplatesSection />
 
       {/* Recurring Tasks Section */}
       <RecurringTasksSection />
