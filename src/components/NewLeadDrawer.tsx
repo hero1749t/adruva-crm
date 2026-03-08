@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { logActivity } from "@/hooks/useActivityLog";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
