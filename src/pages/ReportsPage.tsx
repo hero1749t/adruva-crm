@@ -243,6 +243,28 @@ const ReportsPage = () => {
           <p className="text-sm text-muted-foreground">Revenue analytics, trends & team performance</p>
         </div>
 
+        {/* Export Buttons */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-border bg-muted/30 text-xs"
+            onClick={() => exportReportCsv(exportData)}
+          >
+            <Download className="h-3.5 w-3.5" />
+            CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-border bg-muted/30 text-xs"
+            onClick={() => exportReportPdf(exportData)}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            PDF
+          </Button>
+        </div>
+
         {/* Date Range Filter */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Preset buttons */}
