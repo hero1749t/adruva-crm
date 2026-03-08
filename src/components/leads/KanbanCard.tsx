@@ -1,7 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Building2, Phone, User } from "lucide-react";
+import { Building2, Phone } from "lucide-react";
 
 interface Lead {
   id: string;
@@ -26,8 +26,11 @@ export default function KanbanCard({ lead, isDragging, canDrag }: Props) {
   });
 
   const style = transform
-    ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
-    : undefined;
+    ? {
+        transform: `translate(${transform.x}px, ${transform.y}px) rotate(${Math.min(Math.max(transform.x * 0.02, -3), 3)}deg)`,
+        transition: "box-shadow 0.2s ease",
+      }
+    : { transition: "transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease" };
 
   const assignedName = (lead as any).profiles?.name;
 
@@ -39,8 +42,10 @@ export default function KanbanCard({ lead, isDragging, canDrag }: Props) {
       {...attributes}
       onClick={() => !isDragging && navigate(`/leads/${lead.id}`)}
       className={cn(
-        "cursor-pointer rounded-lg border border-border bg-card p-3 shadow-sm transition-all hover:border-primary/30 hover:shadow-md",
-        isDragging && "rotate-2 scale-105 shadow-xl ring-2 ring-primary/30",
+        "cursor-pointer rounded-lg border border-border bg-card p-3 shadow-sm",
+        "transition-all duration-200 ease-out",
+        "hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5",
+        isDragging && "rotate-2 scale-105 shadow-2xl ring-2 ring-primary/40 z-50 opacity-90",
         canDrag && "cursor-grab active:cursor-grabbing"
       )}
     >

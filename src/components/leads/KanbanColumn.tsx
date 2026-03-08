@@ -16,37 +16,57 @@ interface Props {
   id: string;
   label: string;
   color: string;
+  bgTint: string;
+  countColor: string;
   leads: Lead[];
   canDrag: boolean;
 }
 
-export default function KanbanColumn({ id, label, color, leads, canDrag }: Props) {
+export default function KanbanColumn({ id, label, color, bgTint, countColor, leads, canDrag }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "flex min-h-[300px] flex-col rounded-xl border-t-2 bg-surface/50 p-2 transition-colors",
+        "flex min-h-[300px] flex-col rounded-xl border-t-2 p-2 transition-all duration-300",
         color,
-        isOver && "bg-primary/[0.06] ring-1 ring-primary/20"
+        bgTint,
+        isOver && "ring-2 ring-primary/30 scale-[1.01] shadow-lg"
       )}
     >
       <div className="mb-2 flex items-center justify-between px-1">
         <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
           {label}
         </span>
-        <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
-          {leads.length}
+        <span
+          className={cn(
+            "rounded-full px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums transition-all duration-300",
+            countColor,
+          )}
+          key={leads.length} // re-mount for animation
+        >
+          <span className="inline-block animate-scale-in">{leads.length}</span>
         </span>
       </div>
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
-        {leads.map((lead) => (
-          <KanbanCard key={lead.id} lead={lead} canDrag={canDrag} />
+        {leads.map((lead, i) => (
+          <div
+            key={lead.id}
+            className="animate-fade-in"
+            style={{ animationDelay: `${i * 50}ms`, animationFillMode: "backwards" }}
+          >
+            <KanbanCard lead={lead} canDrag={canDrag} />
+          </div>
         ))}
         {leads.length === 0 && (
-          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border/50 p-4">
-            <span className="text-xs text-muted-foreground/50">No leads</span>
+          <div className={cn(
+            "flex flex-1 items-center justify-center rounded-lg border border-dashed p-4 transition-all duration-300",
+            isOver ? "border-primary/40 bg-primary/[0.04]" : "border-border/50"
+          )}>
+            <span className="text-xs text-muted-foreground/50">
+              {isOver ? "Drop here" : "No leads"}
+            </span>
           </div>
         )}
       </div>

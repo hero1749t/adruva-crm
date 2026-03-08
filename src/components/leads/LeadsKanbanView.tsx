@@ -19,12 +19,48 @@ import KanbanColumn from "./KanbanColumn";
 import KanbanCard from "./KanbanCard";
 
 const COLUMNS = [
-  { id: "new_lead", label: "New Lead", color: "border-muted-foreground/30" },
-  { id: "audit_booked", label: "Audit Booked", color: "border-primary/40" },
-  { id: "audit_done", label: "Audit Done", color: "border-accent/40" },
-  { id: "in_progress", label: "In Progress", color: "border-warning/40" },
-  { id: "lead_won", label: "Lead Won", color: "border-success/40" },
-  { id: "lead_lost", label: "Lead Lost", color: "border-destructive/40" },
+  {
+    id: "new_lead",
+    label: "New Lead",
+    color: "border-muted-foreground/30",
+    bgTint: "bg-surface/50",
+    countColor: "bg-muted text-muted-foreground",
+  },
+  {
+    id: "audit_booked",
+    label: "Audit Booked",
+    color: "border-primary/40",
+    bgTint: "bg-primary/[0.03]",
+    countColor: "bg-primary/15 text-primary",
+  },
+  {
+    id: "audit_done",
+    label: "Audit Done",
+    color: "border-accent/40",
+    bgTint: "bg-accent/[0.03]",
+    countColor: "bg-accent/15 text-accent",
+  },
+  {
+    id: "in_progress",
+    label: "In Progress",
+    color: "border-warning/40",
+    bgTint: "bg-warning/[0.03]",
+    countColor: "bg-warning/15 text-warning",
+  },
+  {
+    id: "lead_won",
+    label: "Lead Won",
+    color: "border-success",
+    bgTint: "bg-success/[0.06]",
+    countColor: "bg-success/20 text-success",
+  },
+  {
+    id: "lead_lost",
+    label: "Lead Lost",
+    color: "border-destructive",
+    bgTint: "bg-destructive/[0.06]",
+    countColor: "bg-destructive/20 text-destructive",
+  },
 ] as const;
 
 interface Lead {
@@ -76,12 +112,12 @@ export default function LeadsKanbanView({ leads, isLoading }: Props) {
     const lead = leads.find((l) => l.id === leadId);
     if (!lead || lead.status === newStatus) return;
 
-    // Check it's a valid column
     if (!COLUMNS.some((c) => c.id === newStatus)) return;
 
     const oldStatus = lead.status;
     await supabase.from("leads").update({ status: newStatus as any }).eq("id", leadId);
     queryClient.invalidateQueries({ queryKey: ["leads"] });
+    queryClient.invalidateQueries({ queryKey: ["leads-kanban"] });
     logActivity({ entity: "lead", entityId: leadId, action: "status_changed", metadata: { name: lead.name, from: oldStatus, to: newStatus } });
     sendStatusEmail({ entity: "lead", entityName: lead.name, oldStatus, newStatus, assignedTo: lead.assigned_to });
     toast({ title: `${lead.name} → ${COLUMNS.find((c) => c.id === newStatus)?.label}` });
@@ -91,10 +127,13 @@ export default function LeadsKanbanView({ leads, isLoading }: Props) {
     return (
       <div className="grid grid-cols-6 gap-3">
         {COLUMNS.map((col) => (
-          <div key={col.id} className="space-y-3 rounded-xl border border-border bg-surface/50 p-3">
-            <div className="h-5 w-24 animate-pulse rounded bg-muted" />
-            <div className="h-20 animate-pulse rounded bg-muted/50" />
-            <div className="h-20 animate-pulse rounded bg-muted/50" />
+          <div key={col.id} className={`space-y-3 rounded-xl border-t-2 ${col.color} ${col.bgTint} p-3`}>
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+              <div className="h-5 w-5 animate-pulse rounded-full bg-muted" />
+            </div>
+            <div className="h-24 animate-pulse rounded-lg bg-muted/40" />
+            <div className="h-24 animate-pulse rounded-lg bg-muted/30" />
           </div>
         ))}
       </div>
@@ -115,12 +154,17 @@ export default function LeadsKanbanView({ leads, isLoading }: Props) {
             id={col.id}
             label={col.label}
             color={col.color}
+            bgTint={col.bgTint}
+            countColor={col.countColor}
             leads={grouped[col.id] || []}
             canDrag={canDrag}
           />
         ))}
       </div>
-      <DragOverlay>
+      <DragOverlay dropAnimation={{
+        duration: 250,
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      }}>
         {activeLead ? <KanbanCard lead={activeLead} isDragging /> : null}
       </DragOverlay>
     </DndContext>
