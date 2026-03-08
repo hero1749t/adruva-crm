@@ -180,6 +180,9 @@ const ClientsPage = () => {
                         </span>
                       )}
                     </td>
+                    <td className="px-4 py-3">
+                      <HealthScoreBadge health={health} />
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{managerName}</td>
                     <td className="px-4 py-3 text-muted-foreground">{client.start_date ? new Date(client.start_date).toLocaleDateString() : "—"}</td>
                   </tr>
