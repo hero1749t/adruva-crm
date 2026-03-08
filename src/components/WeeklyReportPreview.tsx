@@ -52,6 +52,22 @@ export const WeeklyReportPreviewButton = () => {
 
 const PreviewContent = ({ profileName, profileId }: { profileName: string; profileId: string }) => {
   const [viewMode, setViewMode] = useState<ViewMode>("owner");
+  const [selectedMemberId, setSelectedMemberId] = useState(profileId);
+
+  const { data: teamMembers } = useQuery({
+    queryKey: ["weekly-report-team-members"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, name, role")
+        .eq("status", "active")
+        .order("name");
+      return data || [];
+    },
+  });
+
+  const selectedMember = teamMembers?.find((m) => m.id === selectedMemberId);
+  const displayName = viewMode === "team" && selectedMember ? selectedMember.name : profileName;
 
   const { data, isLoading } = useQuery({
     queryKey: ["weekly-report-preview"],
