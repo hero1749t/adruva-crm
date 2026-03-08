@@ -231,6 +231,15 @@ const ClientDetailPage = () => {
         <span className={`rounded-full px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-wider ${bConf.color}`}>
           {bConf.label}
         </span>
+        {healthScore && (
+          <div className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1">
+            <Activity className="h-3 w-3 text-muted-foreground" />
+            <HealthScoreBadge health={healthScore} size="md" />
+            <span className={`font-mono text-[10px] font-medium uppercase tracking-wider ${healthScore.color}`}>
+              {healthScore.label}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Two-panel layout */}
