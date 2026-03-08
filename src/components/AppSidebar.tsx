@@ -34,7 +34,7 @@ const navItems: NavItem[] = [
   { icon: Receipt, label: "Invoices", path: "/invoices", roles: ["owner", "admin"] },
   { icon: BarChart3, label: "Reports", path: "/reports", roles: ["owner", "admin"] },
   { icon: UsersRound, label: "Team", path: "/team", roles: ["owner", "admin"] },
-  { icon: ShieldCheck, label: "Roles", path: "/roles", roles: ["owner"] },
+  
   { icon: Settings, label: "Settings", path: "/settings", roles: ["owner"] },
   { icon: ScrollText, label: "Logs", path: "/logs", roles: ["owner", "admin"] },
 ];
