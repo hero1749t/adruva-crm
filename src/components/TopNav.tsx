@@ -34,6 +34,14 @@ export function TopNav() {
 
       {/* Right side */}
       <div className="flex items-center gap-4">
+        <button
+          onClick={toggleTheme}
+          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
+
         <NotificationDropdown />
 
         <div className="flex items-center gap-3">
