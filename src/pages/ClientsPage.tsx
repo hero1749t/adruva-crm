@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ const clientStatusConfig: Record<string, { label: string; color: string }> = {
 
 const ClientsPage = () => {
   const [search, setSearch] = useState("");
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
@@ -91,7 +93,7 @@ const ClientsPage = () => {
                 const statusConf = clientStatusConfig[client.status || "active"];
                 const managerName = (client as any).profiles?.name || "—";
                 return (
-                  <tr key={client.id} className="border-b border-border/50 transition-colors hover:bg-primary/[0.03] cursor-pointer">
+                  <tr key={client.id} className="border-b border-border/50 transition-colors hover:bg-primary/[0.03] cursor-pointer" onClick={() => navigate(`/clients/${client.id}`)}>
                     <td className="px-4 py-3 font-medium text-foreground">{client.client_name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{client.company_name || "—"}</td>
                     <td className="px-4 py-3">
