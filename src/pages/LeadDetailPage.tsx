@@ -188,6 +188,19 @@ const LeadDetailPage = () => {
   }
 
   if (!lead) {
+    // Log blocked access attempt when lead is not found (likely due to RLS)
+    if (id && profile?.id) {
+      logActivity({
+        entity: "security",
+        entityId: id,
+        action: "access_denied",
+        metadata: {
+          resource: "lead",
+          reason: "lead_not_found_or_unauthorized",
+          userRole: profile.role,
+        },
+      });
+    }
     return (
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={() => navigate("/leads")} className="gap-2 text-muted-foreground">
