@@ -30,6 +30,8 @@ const leadSchema = z.object({
   service_interest: z.string().trim().max(200, "Max 200 characters").optional().or(z.literal("")),
   assigned_to: z.string().optional().or(z.literal("")),
   notes: z.string().trim().max(1000, "Max 1000 characters").optional().or(z.literal("")),
+  business_type: z.string().optional().or(z.literal("")),
+  budget: z.string().optional().or(z.literal("")),
 });
 
 type LeadFormValues = z.infer<typeof leadSchema>;
@@ -95,10 +97,12 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
         phone: values.phone.trim(),
         company_name: values.company_name?.trim() || null,
         source: values.source || null,
-        service_interest: values.service_interest?.trim() || null,
+        service_interest: values.service_interest?.trim() ? [values.service_interest.trim()] : null,
         assigned_to: values.assigned_to || null,
         notes: values.notes?.trim() || null,
-      }).select("id").single();
+        business_type: values.business_type || null,
+        budget: values.budget || null,
+      } as any).select("id").single();
       if (error) throw error;
       return { id: data.id, name: values.name.trim() };
     },

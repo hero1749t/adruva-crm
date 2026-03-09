@@ -451,6 +451,8 @@ export type Database = {
       leads: {
         Row: {
           assigned_to: string | null
+          budget: Database["public"]["Enums"]["lead_budget"] | null
+          business_type: Database["public"]["Enums"]["business_type"] | null
           company_name: string | null
           created_at: string | null
           email: string
@@ -460,13 +462,15 @@ export type Database = {
           notes: string | null
           phone: string
           search_vector: unknown
-          service_interest: string | null
-          source: string | null
+          service_interest: string[] | null
+          source: Database["public"]["Enums"]["lead_source"] | null
           status: Database["public"]["Enums"]["lead_status"]
           updated_at: string | null
         }
         Insert: {
           assigned_to?: string | null
+          budget?: Database["public"]["Enums"]["lead_budget"] | null
+          business_type?: Database["public"]["Enums"]["business_type"] | null
           company_name?: string | null
           created_at?: string | null
           email: string
@@ -476,13 +480,15 @@ export type Database = {
           notes?: string | null
           phone: string
           search_vector?: unknown
-          service_interest?: string | null
-          source?: string | null
+          service_interest?: string[] | null
+          source?: Database["public"]["Enums"]["lead_source"] | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string | null
         }
         Update: {
           assigned_to?: string | null
+          budget?: Database["public"]["Enums"]["lead_budget"] | null
+          business_type?: Database["public"]["Enums"]["business_type"] | null
           company_name?: string | null
           created_at?: string | null
           email?: string
@@ -492,8 +498,8 @@ export type Database = {
           notes?: string | null
           phone?: string
           search_vector?: unknown
-          service_interest?: string | null
-          source?: string | null
+          service_interest?: string[] | null
+          source?: Database["public"]["Enums"]["lead_source"] | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string | null
         }
@@ -943,8 +949,29 @@ export type Database = {
     }
     Enums: {
       billing_status: "due" | "paid" | "overdue"
+      business_type:
+        | "restaurant"
+        | "clinic"
+        | "real_estate"
+        | "ecommerce"
+        | "education"
+        | "gym_fitness"
+        | "salon"
+        | "local_shop"
+        | "corporate"
+        | "other"
       client_status: "active" | "paused" | "completed"
       invoice_status: "draft" | "sent" | "paid" | "overdue" | "cancelled"
+      lead_budget: "5k_10k" | "10k_25k" | "25k_50k" | "50k_1l" | "1l_plus"
+      lead_source:
+        | "website_form"
+        | "whatsapp"
+        | "facebook_ads"
+        | "google_ads"
+        | "instagram"
+        | "referral"
+        | "cold_call"
+        | "manual_entry"
       lead_status:
         | "new_lead"
         | "audit_booked"
@@ -1084,8 +1111,31 @@ export const Constants = {
   public: {
     Enums: {
       billing_status: ["due", "paid", "overdue"],
+      business_type: [
+        "restaurant",
+        "clinic",
+        "real_estate",
+        "ecommerce",
+        "education",
+        "gym_fitness",
+        "salon",
+        "local_shop",
+        "corporate",
+        "other",
+      ],
       client_status: ["active", "paused", "completed"],
       invoice_status: ["draft", "sent", "paid", "overdue", "cancelled"],
+      lead_budget: ["5k_10k", "10k_25k", "25k_50k", "50k_1l", "1l_plus"],
+      lead_source: [
+        "website_form",
+        "whatsapp",
+        "facebook_ads",
+        "google_ads",
+        "instagram",
+        "referral",
+        "cold_call",
+        "manual_entry",
+      ],
       lead_status: [
         "new_lead",
         "audit_booked",

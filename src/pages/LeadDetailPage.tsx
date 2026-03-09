@@ -333,7 +333,7 @@ const LeadDetailPage = () => {
               <InfoRow icon={Mail} label="Email" field="email" value={lead.email} />
               <InfoRow icon={Building2} label="Company" field="company_name" value={lead.company_name} />
               <InfoRow icon={Globe} label="Source" field="source" value={lead.source} />
-              <InfoRow icon={Globe} label="Service Interest" field="service_interest" value={lead.service_interest} />
+              <InfoRow icon={Globe} label="Service Interest" field="service_interest" value={Array.isArray(lead.service_interest) ? lead.service_interest.join(", ") : lead.service_interest} />
             </div>
           </div>
 

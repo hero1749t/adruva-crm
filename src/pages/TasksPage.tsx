@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,7 @@ const TasksPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
+  const [viewFilter, setViewFilter] = useState<"active" | "completed">("active");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [assignedFilter, setAssignedFilter] = useState("all");
@@ -69,7 +71,7 @@ const TasksPage = () => {
   const isOwnerOrAdmin = can("tasks", "create");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["tasks", statusFilter, priorityFilter, debouncedSearch, assignedFilter, dateFilter, page],
+    queryKey: ["tasks", viewFilter, statusFilter, priorityFilter, debouncedSearch, assignedFilter, dateFilter, page],
     queryFn: async () => {
       const from = (page - 1) * perPage;
       const to = from + perPage - 1;
@@ -79,6 +81,13 @@ const TasksPage = () => {
         .select("*, clients!tasks_client_id_fkey(client_name), profiles!tasks_assigned_to_fkey(name)", { count: "exact" })
         .order("deadline", { ascending: true })
         .range(from, to);
+
+      // Apply view filter (active vs completed)
+      if (viewFilter === "active") {
+        query = query.in("status", ["pending", "in_progress", "overdue"]);
+      } else {
+        query = query.eq("status", "completed");
+      }
 
       if (statusFilter !== "all") query = query.eq("status", statusFilter as any);
       if (priorityFilter !== "all") query = query.eq("priority", priorityFilter as any);
@@ -220,6 +229,13 @@ const TasksPage = () => {
           </div>
         )}
       </div>
+
+      <Tabs value={viewFilter} onValueChange={(v) => { setViewFilter(v as "active" | "completed"); setPage(1); }} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="active">Active & Pending</TabsTrigger>
+          <TabsTrigger value="completed">Completed</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 animate-in fade-in slide-in-from-top-2">
