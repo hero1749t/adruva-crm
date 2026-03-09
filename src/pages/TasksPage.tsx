@@ -230,33 +230,34 @@ const TasksPage = () => {
         )}
       </div>
 
-      <Tabs value={viewFilter} onValueChange={(v) => { setViewFilter(v as "active" | "completed"); setPage(1); }} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="active">Active & Pending</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="sticky top-0 z-10 -mx-6 bg-background px-6 pb-4 pt-2 space-y-4">
+        <Tabs value={viewFilter} onValueChange={(v) => { setViewFilter(v as "active" | "completed"); setPage(1); }} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="active">Active & Pending</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-      {selected.size > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 animate-in fade-in slide-in-from-top-2">
-          <span className="text-sm font-medium text-foreground">{selected.size} task{selected.size !== 1 ? "s" : ""} selected</span>
-          <div className="ml-auto flex items-center gap-2">
-            {isOwnerOrAdmin && (
-              <>
-                <Button variant="outline" size="sm" className="gap-2" onClick={() => setCompleteDialogOpen(true)}>
-                  <CheckCircle2 className="h-4 w-4" /> Complete
-                </Button>
-                <Button variant="outline" size="sm" className="gap-2" onClick={() => setAssignDialogOpen(true)}>
-                  <UserPlus className="h-4 w-4" /> Assign
-                </Button>
-              </>
-            )}
-            <Button variant="ghost" size="sm" onClick={clearSelection}><X className="h-4 w-4" /></Button>
+        {selected.size > 0 && (
+          <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 animate-in fade-in slide-in-from-top-2">
+            <span className="text-sm font-medium text-foreground">{selected.size} task{selected.size !== 1 ? "s" : ""} selected</span>
+            <div className="ml-auto flex items-center gap-2">
+              {isOwnerOrAdmin && (
+                <>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => setCompleteDialogOpen(true)}>
+                    <CheckCircle2 className="h-4 w-4" /> Complete
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => setAssignDialogOpen(true)}>
+                    <UserPlus className="h-4 w-4" /> Assign
+                  </Button>
+                </>
+              )}
+              <Button variant="ghost" size="sm" onClick={clearSelection}><X className="h-4 w-4" /></Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
         {profile?.id && (
           <Button
             variant={assignedFilter === profile.id ? "default" : "outline"}
