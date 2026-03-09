@@ -14,8 +14,8 @@ import {
   CreditCard,
   BarChart3,
   Zap,
-  ShieldCheck,
   Layers,
+  UserCog,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,7 +26,6 @@ type NavItem = {
   label: string;
   path: string;
   roles?: string[];
-  /** Resource key to check custom role access */
   resource?: keyof RolePermissions;
   dividerBefore?: boolean;
 };
@@ -40,12 +39,13 @@ const navItems: NavItem[] = [
   { icon: CreditCard, label: "Payments", path: "/payments", roles: ["owner", "admin"], resource: "payments" },
   { icon: BarChart3, label: "Reports", path: "/reports", roles: ["owner", "admin"], resource: "reports" },
   { icon: UsersRound, label: "Team", path: "/team", roles: ["owner", "admin"], resource: "team" },
-  // Owner-only admin section
+  // Admin section
   { icon: Layers, label: "Custom Fields", path: "/custom-fields", roles: ["owner", "admin"], resource: "customFields", dividerBefore: true },
-  { icon: ShieldCheck, label: "Roles & Perms", path: "/roles", roles: ["owner"], resource: "roles" },
   { icon: Zap, label: "Integrations", path: "/integrations", roles: ["owner"], resource: "integrations" },
   { icon: Settings, label: "Settings", path: "/settings", roles: ["owner"], resource: "settings" },
   { icon: ScrollText, label: "Logs", path: "/logs", roles: ["owner", "admin"] },
+  // Profile for everyone
+  { icon: UserCog, label: "My Profile", path: "/profile", dividerBefore: true },
 ];
 
 export function AppSidebar() {
@@ -56,15 +56,11 @@ export function AppSidebar() {
   const userRole = profile?.role || "team";
 
   const filteredItems = navItems.filter((item) => {
-    // Owner sees everything
+    // My Profile is always visible
+    if (item.path === "/profile") return true;
     if (isOwner) return true;
-    
-    // Check system role
     const systemRoleOk = !item.roles || item.roles.includes(userRole);
-    
-    // Check custom role access
     const customRoleOk = item.resource ? hasAccessLevel(item.resource, "view") : false;
-    
     return systemRoleOk || customRoleOk;
   });
 
@@ -75,7 +71,6 @@ export function AppSidebar() {
         collapsed ? "w-16" : "w-60"
       )}
     >
-      {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-border px-4">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary font-display text-sm font-bold text-primary-foreground">
           A
@@ -87,7 +82,6 @@ export function AppSidebar() {
         )}
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 space-y-0.5 px-2 py-4 overflow-y-auto">
         {filteredItems.map((item, idx) => {
           const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
@@ -115,7 +109,6 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground"
