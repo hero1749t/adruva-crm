@@ -19,29 +19,32 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions, type RolePermissions } from "@/hooks/usePermissions";
 
 type NavItem = {
   icon: React.ElementType;
   label: string;
   path: string;
   roles?: string[];
+  /** Resource key to check custom role access */
+  resource?: keyof RolePermissions;
   dividerBefore?: boolean;
 };
 
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Users, label: "Leads", path: "/leads" },
-  { icon: UserCheck, label: "Clients", path: "/clients" },
-  { icon: ClipboardList, label: "Tasks", path: "/tasks" },
+  { icon: Users, label: "Leads", path: "/leads", resource: "leads" },
+  { icon: UserCheck, label: "Clients", path: "/clients", resource: "clients" },
+  { icon: ClipboardList, label: "Tasks", path: "/tasks", resource: "tasks" },
   { icon: Calendar, label: "Calendar", path: "/calendar" },
-  { icon: CreditCard, label: "Payments", path: "/payments", roles: ["owner", "admin"] },
-  { icon: BarChart3, label: "Reports", path: "/reports", roles: ["owner", "admin"] },
-  { icon: UsersRound, label: "Team", path: "/team", roles: ["owner", "admin"] },
+  { icon: CreditCard, label: "Payments", path: "/payments", roles: ["owner", "admin"], resource: "payments" },
+  { icon: BarChart3, label: "Reports", path: "/reports", roles: ["owner", "admin"], resource: "reports" },
+  { icon: UsersRound, label: "Team", path: "/team", roles: ["owner", "admin"], resource: "team" },
   // Owner-only admin section
-  { icon: Layers, label: "Custom Fields", path: "/custom-fields", roles: ["owner", "admin"], dividerBefore: true },
-  { icon: ShieldCheck, label: "Roles & Perms", path: "/roles", roles: ["owner"] },
-  { icon: Zap, label: "Integrations", path: "/integrations", roles: ["owner"] },
-  { icon: Settings, label: "Settings", path: "/settings", roles: ["owner"] },
+  { icon: Layers, label: "Custom Fields", path: "/custom-fields", roles: ["owner", "admin"], resource: "customFields", dividerBefore: true },
+  { icon: ShieldCheck, label: "Roles & Perms", path: "/roles", roles: ["owner"], resource: "roles" },
+  { icon: Zap, label: "Integrations", path: "/integrations", roles: ["owner"], resource: "integrations" },
+  { icon: Settings, label: "Settings", path: "/settings", roles: ["owner"], resource: "settings" },
   { icon: ScrollText, label: "Logs", path: "/logs", roles: ["owner", "admin"] },
 ];
 
@@ -49,11 +52,21 @@ export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { profile } = useAuth();
+  const { hasAccessLevel, isOwner } = usePermissions();
   const userRole = profile?.role || "team";
 
-  const filteredItems = navItems.filter(
-    (item) => !item.roles || item.roles.includes(userRole)
-  );
+  const filteredItems = navItems.filter((item) => {
+    // Owner sees everything
+    if (isOwner) return true;
+    
+    // Check system role
+    const systemRoleOk = !item.roles || item.roles.includes(userRole);
+    
+    // Check custom role access
+    const customRoleOk = item.resource ? hasAccessLevel(item.resource, "view") : false;
+    
+    return systemRoleOk || customRoleOk;
+  });
 
   return (
     <aside

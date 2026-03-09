@@ -46,13 +46,13 @@ const App = () => (
                 <Route path="clients/:id" element={<ClientDetailPage />} />
                 <Route path="tasks" element={<TasksPage />} />
                 <Route path="calendar" element={<CalendarPage />} />
-                <Route path="payments" element={<ProtectedRoute allowedRoles={["owner", "admin"]} routeName="Payments"><PaymentsPage /></ProtectedRoute>} />
-                <Route path="integrations" element={<ProtectedRoute allowedRoles={["owner"]} routeName="Integrations"><IntegrationsPage /></ProtectedRoute>} />
-                <Route path="team" element={<ProtectedRoute allowedRoles={["owner", "admin"]} routeName="Team"><TeamPage /></ProtectedRoute>} />
-                <Route path="settings" element={<ProtectedRoute allowedRoles={["owner"]} routeName="Settings"><SettingsPage /></ProtectedRoute>} />
-                <Route path="reports" element={<ProtectedRoute allowedRoles={["owner", "admin"]} routeName="Reports"><ReportsPage /></ProtectedRoute>} />
-                <Route path="roles" element={<ProtectedRoute allowedRoles={["owner"]} routeName="Roles & Permissions"><RolesPage /></ProtectedRoute>} />
-                <Route path="custom-fields" element={<ProtectedRoute allowedRoles={["owner", "admin"]} routeName="Custom Fields"><CustomFieldsPage /></ProtectedRoute>} />
+                <Route path="payments" element={<ProtectedRoute allowedRoles={["owner", "admin"]} resource="payments" routeName="Payments"><PaymentsPage /></ProtectedRoute>} />
+                <Route path="integrations" element={<ProtectedRoute allowedRoles={["owner"]} resource="integrations" routeName="Integrations"><IntegrationsPage /></ProtectedRoute>} />
+                <Route path="team" element={<ProtectedRoute allowedRoles={["owner", "admin"]} resource="team" routeName="Team"><TeamPage /></ProtectedRoute>} />
+                <Route path="settings" element={<ProtectedRoute allowedRoles={["owner"]} resource="settings" routeName="Settings"><SettingsPage /></ProtectedRoute>} />
+                <Route path="reports" element={<ProtectedRoute allowedRoles={["owner", "admin"]} resource="reports" routeName="Reports"><ReportsPage /></ProtectedRoute>} />
+                <Route path="roles" element={<ProtectedRoute allowedRoles={["owner"]} resource="roles" routeName="Roles & Permissions"><RolesPage /></ProtectedRoute>} />
+                <Route path="custom-fields" element={<ProtectedRoute allowedRoles={["owner", "admin"]} resource="customFields" routeName="Custom Fields"><CustomFieldsPage /></ProtectedRoute>} />
                 <Route path="invoices" element={<Navigate to="/payments" replace />} />
                 <Route path="logs" element={<ProtectedRoute allowedRoles={["owner", "admin"]} routeName="Logs"><LogsPage /></ProtectedRoute>} />
               </Route>
