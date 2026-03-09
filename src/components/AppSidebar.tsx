@@ -14,6 +14,8 @@ import {
   CreditCard,
   BarChart3,
   Zap,
+  ShieldCheck,
+  Layers,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +25,7 @@ type NavItem = {
   label: string;
   path: string;
   roles?: string[];
+  dividerBefore?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -33,8 +36,11 @@ const navItems: NavItem[] = [
   { icon: Calendar, label: "Calendar", path: "/calendar" },
   { icon: CreditCard, label: "Payments", path: "/payments", roles: ["owner", "admin"] },
   { icon: BarChart3, label: "Reports", path: "/reports", roles: ["owner", "admin"] },
-  { icon: Zap, label: "Integrations", path: "/integrations", roles: ["owner"] },
   { icon: UsersRound, label: "Team", path: "/team", roles: ["owner", "admin"] },
+  // Owner-only admin section
+  { icon: Layers, label: "Custom Fields", path: "/custom-fields", roles: ["owner", "admin"], dividerBefore: true },
+  { icon: ShieldCheck, label: "Roles & Perms", path: "/roles", roles: ["owner"] },
+  { icon: Zap, label: "Integrations", path: "/integrations", roles: ["owner"] },
   { icon: Settings, label: "Settings", path: "/settings", roles: ["owner"] },
   { icon: ScrollText, label: "Logs", path: "/logs", roles: ["owner", "admin"] },
 ];
@@ -44,6 +50,10 @@ export function AppSidebar() {
   const location = useLocation();
   const { profile } = useAuth();
   const userRole = profile?.role || "team";
+
+  const filteredItems = navItems.filter(
+    (item) => !item.roles || item.roles.includes(userRole)
+  );
 
   return (
     <aside
@@ -65,14 +75,16 @@ export function AppSidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 space-y-1 px-2 py-4">
-        {navItems
-          .filter((item) => !item.roles || item.roles.includes(userRole))
-          .map((item) => {
-            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
-            return (
+      <nav className="flex-1 space-y-0.5 px-2 py-4 overflow-y-auto">
+        {filteredItems.map((item, idx) => {
+          const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
+          const showDivider = item.dividerBefore && idx > 0;
+          return (
+            <div key={item.path}>
+              {showDivider && (
+                <div className={cn("my-2 border-t border-border/50", collapsed && "mx-1")} />
+              )}
               <Link
-                key={item.path}
                 to={item.path}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
@@ -80,12 +92,14 @@ export function AppSidebar() {
                     ? "bg-primary/15 text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
+                title={collapsed ? item.label : undefined}
               >
                 <item.icon className="h-5 w-5 shrink-0" />
                 {!collapsed && <span>{item.label}</span>}
               </Link>
-            );
-          })}
+            </div>
+          );
+        })}
       </nav>
 
       {/* Collapse toggle */}

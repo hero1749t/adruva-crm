@@ -21,7 +21,8 @@ import LogsPage from "@/pages/LogsPage";
 import PaymentsPage from "@/pages/PaymentsPage";
 import IntegrationsPage from "@/pages/IntegrationsPage";
 import ReportsPage from "@/pages/ReportsPage";
-
+import RolesPage from "@/pages/RolesPage";
+import CustomFieldsPage from "@/pages/CustomFieldsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,7 +51,8 @@ const App = () => (
                 <Route path="team" element={<ProtectedRoute allowedRoles={["owner", "admin"]} routeName="Team"><TeamPage /></ProtectedRoute>} />
                 <Route path="settings" element={<ProtectedRoute allowedRoles={["owner"]} routeName="Settings"><SettingsPage /></ProtectedRoute>} />
                 <Route path="reports" element={<ProtectedRoute allowedRoles={["owner", "admin"]} routeName="Reports"><ReportsPage /></ProtectedRoute>} />
-                <Route path="roles" element={<Navigate to="/team" replace />} />
+                <Route path="roles" element={<ProtectedRoute allowedRoles={["owner"]} routeName="Roles & Permissions"><RolesPage /></ProtectedRoute>} />
+                <Route path="custom-fields" element={<ProtectedRoute allowedRoles={["owner", "admin"]} routeName="Custom Fields"><CustomFieldsPage /></ProtectedRoute>} />
                 <Route path="invoices" element={<Navigate to="/payments" replace />} />
                 <Route path="logs" element={<ProtectedRoute allowedRoles={["owner", "admin"]} routeName="Logs"><LogsPage /></ProtectedRoute>} />
               </Route>
