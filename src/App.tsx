@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppLayout } from "@/components/AppLayout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import LeadsPage from "@/pages/LeadsPage";
@@ -44,14 +45,14 @@ const App = () => (
                 <Route path="clients/:id" element={<ClientDetailPage />} />
                 <Route path="tasks" element={<TasksPage />} />
                 <Route path="calendar" element={<CalendarPage />} />
-                <Route path="payments" element={<PaymentsPage />} />
-                <Route path="integrations" element={<IntegrationsPage />} />
-                <Route path="team" element={<TeamPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="reports" element={<ReportsPage />} />
+                <Route path="payments" element={<ProtectedRoute allowedRoles={["owner", "admin"]}><PaymentsPage /></ProtectedRoute>} />
+                <Route path="integrations" element={<ProtectedRoute allowedRoles={["owner"]}><IntegrationsPage /></ProtectedRoute>} />
+                <Route path="team" element={<ProtectedRoute allowedRoles={["owner", "admin"]}><TeamPage /></ProtectedRoute>} />
+                <Route path="settings" element={<ProtectedRoute allowedRoles={["owner"]}><SettingsPage /></ProtectedRoute>} />
+                <Route path="reports" element={<ProtectedRoute allowedRoles={["owner", "admin"]}><ReportsPage /></ProtectedRoute>} />
                 <Route path="roles" element={<Navigate to="/team" replace />} />
                 <Route path="invoices" element={<Navigate to="/payments" replace />} />
-                <Route path="logs" element={<LogsPage />} />
+                <Route path="logs" element={<ProtectedRoute allowedRoles={["owner", "admin"]}><LogsPage /></ProtectedRoute>} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
