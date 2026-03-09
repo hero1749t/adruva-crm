@@ -30,6 +30,8 @@ const leadSchema = z.object({
   service_interest: z.string().trim().max(200, "Max 200 characters").optional().or(z.literal("")),
   assigned_to: z.string().optional().or(z.literal("")),
   notes: z.string().trim().max(1000, "Max 1000 characters").optional().or(z.literal("")),
+  business_type: z.string().optional().or(z.literal("")),
+  budget: z.string().optional().or(z.literal("")),
 });
 
 type LeadFormValues = z.infer<typeof leadSchema>;
