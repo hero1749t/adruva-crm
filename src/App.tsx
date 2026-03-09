@@ -21,8 +21,8 @@ import LogsPage from "@/pages/LogsPage";
 import PaymentsPage from "@/pages/PaymentsPage";
 import IntegrationsPage from "@/pages/IntegrationsPage";
 import ReportsPage from "@/pages/ReportsPage";
-import RolesPage from "@/pages/RolesPage";
 import CustomFieldsPage from "@/pages/CustomFieldsPage";
+import ProfileSettingsPage from "@/pages/ProfileSettingsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,8 +51,9 @@ const App = () => (
                 <Route path="team" element={<ProtectedRoute allowedRoles={["owner", "admin"]} resource="team" routeName="Team"><TeamPage /></ProtectedRoute>} />
                 <Route path="settings" element={<ProtectedRoute allowedRoles={["owner"]} resource="settings" routeName="Settings"><SettingsPage /></ProtectedRoute>} />
                 <Route path="reports" element={<ProtectedRoute allowedRoles={["owner", "admin"]} resource="reports" routeName="Reports"><ReportsPage /></ProtectedRoute>} />
-                <Route path="roles" element={<ProtectedRoute allowedRoles={["owner"]} resource="roles" routeName="Roles & Permissions"><RolesPage /></ProtectedRoute>} />
                 <Route path="custom-fields" element={<ProtectedRoute allowedRoles={["owner", "admin"]} resource="customFields" routeName="Custom Fields"><CustomFieldsPage /></ProtectedRoute>} />
+                <Route path="profile" element={<ProfileSettingsPage />} />
+                <Route path="roles" element={<Navigate to="/team" replace />} />
                 <Route path="invoices" element={<Navigate to="/payments" replace />} />
                 <Route path="logs" element={<ProtectedRoute allowedRoles={["owner", "admin"]} routeName="Logs"><LogsPage /></ProtectedRoute>} />
               </Route>
