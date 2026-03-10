@@ -25,14 +25,25 @@ const ClientsPage = () => {
   const debouncedSearch = useDebounce(search, 400);
   const [page, setPage] = useState(1);
   const [healthFilter, setHealthFilter] = useState<string>("all");
+  const [assignedFilter, setAssignedFilter] = useState<string>("all");
   const perPage = 25;
   const navigate = useNavigate();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
+  // Fetch team members for assigned filter
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["team-members"],
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("id, name").eq("status", "active").order("name");
+      return data || [];
+    },
+    enabled: isOwnerOrAdmin,
+  });
+
   const { data, isLoading } = useQuery({
-    queryKey: ["clients", debouncedSearch, page],
+    queryKey: ["clients", debouncedSearch, assignedFilter, page],
     queryFn: async () => {
       const from = (page - 1) * perPage;
       const to = from + perPage - 1;
@@ -45,6 +56,14 @@ const ClientsPage = () => {
 
       if (debouncedSearch) {
         query = query.or(`client_name.ilike.%${debouncedSearch}%,company_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`);
+      }
+
+      if (assignedFilter !== "all") {
+        if (assignedFilter === "unassigned") {
+          query = query.is("assigned_manager", null);
+        } else {
+          query = query.eq("assigned_manager", assignedFilter);
+        }
       }
 
       const { data, count } = await query;
@@ -115,6 +134,20 @@ const ClientsPage = () => {
             <SelectItem value="critical">Critical (&lt;50)</SelectItem>
           </SelectContent>
         </Select>
+        {isOwnerOrAdmin && (
+          <Select value={assignedFilter} onValueChange={(v) => { setAssignedFilter(v); setPage(1); }}>
+            <SelectTrigger className="h-9 w-44 border-border bg-muted/30 text-sm">
+              <SelectValue placeholder="All Assigned" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Assigned</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {teamMembers.map((m) => (
+                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
