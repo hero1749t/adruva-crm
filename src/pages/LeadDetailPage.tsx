@@ -169,6 +169,22 @@ const LeadDetailPage = () => {
     },
   });
 
+  const deleteLead = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("leads").update({ is_deleted: true }).eq("id", id!);
+      if (error) throw error;
+      logActivity({ entity: "lead", entityId: id!, action: "deleted", metadata: { name: lead?.name } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast({ title: "Lead deleted" });
+      navigate("/leads");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   const startEdit = (field: string, currentValue: string) => {
     setEditingField(field);
     setEditValue(currentValue || "");
