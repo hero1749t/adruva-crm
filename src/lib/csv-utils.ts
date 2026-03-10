@@ -145,7 +145,7 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
   }
 
   const result: ImportResult = { success: 0, errors: [] };
-  const validLeads: Record<string, string | null>[] = [];
+  const validLeads: Record<string, any>[] = [];
   const customValuesPerLead: Record<string, string>[][] = [];
 
   for (let i = 1; i < lines.length; i++) {
