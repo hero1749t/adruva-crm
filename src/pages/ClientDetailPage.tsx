@@ -663,6 +663,22 @@ const ClientDetailPage = () => {
         </TabsContent>
       </Tabs>
     </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete client "{client?.client_name}"?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently delete this client and cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deleteClient.isPending} onClick={(e) => { e.preventDefault(); deleteClient.mutate(); }}>
+              {deleteClient.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };
 
