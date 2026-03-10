@@ -271,17 +271,17 @@ const LeadDetailPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/leads")} className="gap-2 text-muted-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/leads")} className="gap-2 text-muted-foreground self-start">
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        <div className="flex-1">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">{lead.name}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-display text-xl font-bold tracking-tight text-foreground sm:text-2xl truncate">{lead.name}</h1>
           {lead.company_name && (
-            <p className="text-sm text-muted-foreground">{lead.company_name}</p>
+            <p className="text-sm text-muted-foreground truncate">{lead.company_name}</p>
           )}
         </div>
-        <span className={`rounded-full px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-wider ${statusConf.color}`}>
+        <span className={`self-start rounded-full px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-wider whitespace-nowrap ${statusConf.color}`}>
           {statusConf.label}
         </span>
       </div>
