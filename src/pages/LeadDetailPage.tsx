@@ -522,6 +522,22 @@ const LeadDetailPage = () => {
         </div>
       </div>
     </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete lead "{lead?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>This will soft-delete this lead. It can be recovered later if needed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deleteLead.isPending} onClick={(e) => { e.preventDefault(); deleteLead.mutate(); }}>
+              {deleteLead.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };
 
