@@ -68,6 +68,8 @@ const ClientDetailPage = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
+  const isOwner = profile?.role === "owner";
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
