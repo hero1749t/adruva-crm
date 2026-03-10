@@ -366,18 +366,20 @@ const LeadsPage = () => {
             ))}
           </SelectContent>
         </Select>
-        <Select value={assignedFilter} onValueChange={(v) => { setAssignedFilter(v); setPage(1); }}>
-          <SelectTrigger className="h-9 w-44 border-border bg-muted/30 text-sm">
-            <SelectValue placeholder="All Assigned" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Assigned</SelectItem>
-            <SelectItem value="unassigned">Unassigned</SelectItem>
-            {teamMembers.map((m) => (
-              <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {showAssignedFilter && (
+          <Select value={assignedFilter} onValueChange={(v) => { setAssignedFilter(v); setPage(1); }}>
+            <SelectTrigger className="h-9 w-44 border-border bg-muted/30 text-sm">
+              <SelectValue placeholder="All Assigned" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Assigned</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {teamMembers.map((m) => (
+                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={dateFilter} onValueChange={(v) => { setDateFilter(v); setPage(1); }}>
           <SelectTrigger className="h-9 w-40 border-border bg-muted/30 text-sm">
             <SelectValue placeholder="All Time" />
