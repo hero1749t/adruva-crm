@@ -227,7 +227,7 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
 }
 
 export function downloadCsvTemplate() {
-  const csv = CSV_HEADERS.join(",") + "\nJohn Doe,john@example.com,+1234567890,Acme Corp,google,SEO,,Initial contact";
+  const csv = CSV_HEADERS.join(",") + "\nJohn Doe,john@example.com,+1234567890,Acme Corp,google,SEO;PPC,restaurant,10k_25k,,Initial contact";
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
