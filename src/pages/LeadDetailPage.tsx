@@ -10,7 +10,7 @@ import { CommunicationLog } from "@/components/CommunicationLog";
 import { CustomFieldsSection } from "@/components/CustomFieldsSection";
 import {
   ArrowLeft, Phone, Mail, Building2, Globe, StickyNote,
-  Check, X, Pencil, MessageSquare, Calendar, FileText, Send, Loader2,
+  Check, X, Pencil, MessageSquare, Calendar, FileText, Send, Loader2, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

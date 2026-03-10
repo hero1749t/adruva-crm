@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   ArrowLeft, Phone, Mail, Building2, Calendar, IndianRupee,
   Check, X, Pencil, Loader2, ExternalLink, Activity,
-  ClipboardList, FileText, MessageSquare, BarChart3, Settings2,
+  ClipboardList, FileText, MessageSquare, BarChart3, Settings2, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
