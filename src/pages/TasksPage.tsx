@@ -214,6 +214,27 @@ const TasksPage = () => {
     },
   });
 
+  const bulkDelete = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selected);
+      const { error } = await supabase.from("tasks").delete().in("id", ids);
+      if (error) throw error;
+      for (const id of ids) {
+        const task = tasks.find((t) => t.id === id);
+        logActivity({ entity: "task", entityId: id, action: "deleted", metadata: { title: task?.task_title } });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast({ title: `${selected.size} task(s) deleted` });
+      clearSelection();
+      setDeleteDialogOpen(false);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   const startItem = totalCount === 0 ? 0 : (page - 1) * perPage + 1;
   const endItem = Math.min(page * perPage, totalCount);
 
