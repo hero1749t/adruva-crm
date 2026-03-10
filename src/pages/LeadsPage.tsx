@@ -68,7 +68,7 @@ const LeadsPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { can, isOwner, isAdmin } = usePermissions();
-  const canCreateLeads = can("leads", "create");
+  const isOwnerOrAdmin = can("leads", "create");
   const canDeleteLeads = can("leads", "delete");
   const showAssignedFilter = isOwner || isAdmin;
 
