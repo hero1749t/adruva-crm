@@ -482,6 +482,11 @@ const LeadsPage = () => {
                     <td className="px-4 py-3 text-muted-foreground">{assignedName}</td>
                     <td className="px-4 py-3 text-muted-foreground capitalize">{lead.source?.replace("_", " ") || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</td>
+                    {customFieldDefs.map((def) => (
+                      <td key={def.id} className="px-4 py-3 text-muted-foreground">
+                        {customFieldValues[lead.id]?.[def.id] || "—"}
+                      </td>
+                    ))}
                   </tr>
                 );
               })

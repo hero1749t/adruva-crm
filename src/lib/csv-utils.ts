@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { CustomFieldDef } from "@/hooks/useCustomFields";
 
 const CSV_HEADERS = [
   "name",
@@ -51,11 +52,20 @@ function parseCsvLine(line: string): string[] {
   return fields;
 }
 
-export function exportLeadsCsv(leads: any[]) {
-  const headerRow = CSV_HEADERS.join(",");
-  const rows = leads.map((lead) =>
-    CSV_HEADERS.map((h) => escapeCsvField(String(lead[h] ?? ""))).join(",")
-  );
+export function exportLeadsCsv(
+  leads: any[],
+  customFieldDefs: CustomFieldDef[] = [],
+  customFieldValues: Record<string, Record<string, string>> = {}
+) {
+  const allHeaders = [...CSV_HEADERS, ...customFieldDefs.map((d) => d.field_key)];
+  const headerRow = allHeaders.map((h) => escapeCsvField(h)).join(",");
+  const rows = leads.map((lead) => {
+    const baseCols = CSV_HEADERS.map((h) => escapeCsvField(String(lead[h] ?? "")));
+    const customCols = customFieldDefs.map((def) =>
+      escapeCsvField(customFieldValues[lead.id]?.[def.id] || "")
+    );
+    return [...baseCols, ...customCols].join(",");
+  });
   const csv = [headerRow, ...rows].join("\n");
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -63,6 +73,32 @@ export function exportLeadsCsv(leads: any[]) {
   const link = document.createElement("a");
   link.href = url;
   link.download = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function exportClientsCsv(
+  clients: any[],
+  customFieldDefs: CustomFieldDef[] = [],
+  customFieldValues: Record<string, Record<string, string>> = {}
+) {
+  const baseHeaders = ["client_name", "company_name", "email", "phone", "plan", "status", "billing_status", "monthly_payment", "start_date", "contract_end_date"];
+  const allHeaders = [...baseHeaders, ...customFieldDefs.map((d) => d.field_key)];
+  const headerRow = allHeaders.map((h) => escapeCsvField(h)).join(",");
+  const rows = clients.map((client) => {
+    const baseCols = baseHeaders.map((h) => escapeCsvField(String(client[h] ?? "")));
+    const customCols = customFieldDefs.map((def) =>
+      escapeCsvField(customFieldValues[client.id]?.[def.id] || "")
+    );
+    return [...baseCols, ...customCols].join(",");
+  });
+  const csv = [headerRow, ...rows].join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `clients-export-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -89,8 +125,26 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
     };
   }
 
+  // Detect custom field columns (not in base headers)
+  const baseHeaderSet = new Set([...CSV_HEADERS]);
+  const customHeaders = headers.filter((h) => !baseHeaderSet.has(h));
+
+  // Fetch custom field definitions for mapping
+  let customFieldMap: Record<string, string> = {}; // field_key -> def id
+  if (customHeaders.length > 0) {
+    const { data: defs } = await supabase
+      .from("custom_field_definitions")
+      .select("id, field_key")
+      .eq("entity_type", "lead")
+      .in("field_key", customHeaders);
+    for (const def of defs || []) {
+      customFieldMap[def.field_key] = def.id;
+    }
+  }
+
   const result: ImportResult = { success: 0, errors: [] };
   const validLeads: Record<string, string | null>[] = [];
+  const customValuesPerLead: Record<string, string>[][] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const values = parseCsvLine(lines[i]);
@@ -99,7 +153,6 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
       row[h] = values[idx] || "";
     });
 
-    // Validate required fields
     const rowErrors: string[] = [];
     if (!row.name?.trim()) rowErrors.push("name is required");
     if (!row.email?.trim()) rowErrors.push("email is required");
@@ -119,13 +172,23 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
       service_interest: row.service_interest?.trim() || null,
       notes: row.notes?.trim() || null,
     });
+
+    // Collect custom field values for this row
+    const cfValues: Record<string, string>[] = [];
+    for (const h of customHeaders) {
+      const defId = customFieldMap[h];
+      if (defId && row[h]?.trim()) {
+        cfValues.push({ defId, value: row[h].trim() });
+      }
+    }
+    customValuesPerLead.push(cfValues);
   }
 
   // Batch insert in chunks of 50
   const CHUNK_SIZE = 50;
   for (let i = 0; i < validLeads.length; i += CHUNK_SIZE) {
     const chunk = validLeads.slice(i, i + CHUNK_SIZE);
-    const { error } = await supabase.from("leads").insert(chunk as any);
+    const { data: inserted, error } = await supabase.from("leads").insert(chunk as any).select("id");
     if (error) {
       result.errors.push({
         row: i + 2,
@@ -133,6 +196,26 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
       });
     } else {
       result.success += chunk.length;
+
+      // Insert custom field values for inserted leads
+      if (inserted) {
+        const cfInserts: any[] = [];
+        for (let j = 0; j < inserted.length; j++) {
+          const leadIdx = i + j;
+          const cfValues = customValuesPerLead[leadIdx] || [];
+          for (const cf of cfValues) {
+            cfInserts.push({
+              entity_type: "lead",
+              entity_id: inserted[j].id,
+              field_definition_id: cf.defId,
+              value: cf.value,
+            });
+          }
+        }
+        if (cfInserts.length > 0) {
+          await supabase.from("custom_field_values").insert(cfInserts);
+        }
+      }
     }
   }
 
