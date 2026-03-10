@@ -8,6 +8,8 @@ const CSV_HEADERS = [
   "company_name",
   "source",
   "service_interest",
+  "business_type",
+  "budget",
   "status",
   "notes",
 ] as const;
@@ -143,7 +145,7 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
   }
 
   const result: ImportResult = { success: 0, errors: [] };
-  const validLeads: Record<string, string | null>[] = [];
+  const validLeads: Record<string, any>[] = [];
   const customValuesPerLead: Record<string, string>[][] = [];
 
   for (let i = 1; i < lines.length; i++) {
@@ -169,7 +171,9 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
       phone: row.phone.trim(),
       company_name: row.company_name?.trim() || null,
       source: row.source?.trim() || null,
-      service_interest: row.service_interest?.trim() || null,
+      service_interest: row.service_interest?.trim() ? row.service_interest.trim().split(";").map(s => s.trim()) : null,
+      business_type: row.business_type?.trim() || null,
+      budget: row.budget?.trim() || null,
       notes: row.notes?.trim() || null,
     });
 
@@ -223,7 +227,7 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
 }
 
 export function downloadCsvTemplate() {
-  const csv = CSV_HEADERS.join(",") + "\nJohn Doe,john@example.com,+1234567890,Acme Corp,google,SEO,,Initial contact";
+  const csv = CSV_HEADERS.join(",") + "\nJohn Doe,john@example.com,+1234567890,Acme Corp,google,SEO;PPC,restaurant,10k_25k,,Initial contact";
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
