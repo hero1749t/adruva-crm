@@ -126,7 +126,9 @@ export function CustomFieldsSection({ entityType, entityId }: CustomFieldsSectio
           const currentValue = getFieldValue(def.id);
           const isEditing = editingField === def.id;
           const isSelect = def.field_type === "select" || def.field_type === "multi_select";
-          const options: string[] = Array.isArray(def.options) ? def.options : [];
+          const options: string[] = Array.isArray(def.options)
+            ? def.options.map((opt: any) => (typeof opt === "object" && opt !== null ? (opt.value ?? opt.label ?? String(opt)) : String(opt)))
+            : [];
 
           return (
             <div key={def.id} className="group flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/30">

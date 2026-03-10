@@ -483,7 +483,7 @@ const LeadsPage = () => {
                     <td className="px-4 py-3 text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</td>
                     {customFieldDefs.map((def) => (
                       <td key={def.id} className="px-4 py-3 text-muted-foreground">
-                        {customFieldValues[lead.id]?.[def.id] || "—"}
+                        {(() => { const v = customFieldValues[lead.id]?.[def.id]; return (typeof v === "object" && v !== null ? JSON.stringify(v) : v) || "—"; })()}
                       </td>
                     ))}
                   </tr>
