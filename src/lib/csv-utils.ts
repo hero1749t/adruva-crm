@@ -226,8 +226,18 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
   return result;
 }
 
-export function downloadCsvTemplate() {
-  const csv = CSV_HEADERS.join(",") + "\nJohn Doe,john@example.com,+1234567890,Acme Corp,google,SEO;PPC,restaurant,10k_25k,,Initial contact";
+export async function downloadCsvTemplate() {
+  // Fetch custom field definitions for leads dynamically
+  const { data: customDefs } = await supabase
+    .from("custom_field_definitions")
+    .select("field_key")
+    .eq("entity_type", "lead")
+    .eq("is_visible", true)
+    .order("sort_order");
+
+  const allHeaders = [...CSV_HEADERS, ...(customDefs || []).map((d) => d.field_key)];
+  const sampleRow = ["John Doe", "john@example.com", "+1234567890", "Acme Corp", "google", "SEO;PPC", "restaurant", "10k_25k", "", "Initial contact", ...(customDefs || []).map(() => "")];
+  const csv = allHeaders.join(",") + "\n" + sampleRow.join(",");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
