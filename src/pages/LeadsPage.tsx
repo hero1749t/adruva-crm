@@ -160,6 +160,10 @@ const LeadsPage = () => {
     },
   });
 
+  const { data: customFieldDefs = [] } = useCustomFieldDefs("lead");
+  const leadIds = leads.map((l) => l.id);
+  const { data: customFieldValues = {} } = useCustomFieldValues("lead", leadIds);
+
   const allPageSelected = leads.length > 0 && leads.every((l) => selected.has(l.id));
 
   const toggleSelect = (id: string) => {
