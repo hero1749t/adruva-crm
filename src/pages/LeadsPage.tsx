@@ -35,6 +35,8 @@ import LeadsKanbanView from "@/components/leads/LeadsKanbanView";
 import { exportLeadsCsv } from "@/lib/csv-utils";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useCustomFieldDefs, useCustomFieldValues } from "@/hooks/useCustomFields";
+import { useDebounce } from "@/hooks/use-debounce";
 
 const leadStatusConfig: Record<string, { label: string; color: string }> = {
   new_lead: { label: "New Lead", color: "bg-muted text-muted-foreground" },
