@@ -11,6 +11,7 @@ import { logActivity } from "@/hooks/useActivityLog";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useClientHealthScores } from "@/hooks/useClientHealthScore";
 import HealthScoreBadge from "@/components/HealthScoreBadge";
+import { useCustomFieldDefs, useCustomFieldValues } from "@/hooks/useCustomFields";
 
 const clientStatusConfig: Record<string, { label: string; color: string }> = {
   active: { label: "Active", color: "bg-success/20 text-success" },
