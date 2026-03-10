@@ -156,6 +156,22 @@ const ClientDetailPage = () => {
     },
   });
 
+  const deleteClient = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("clients").delete().eq("id", id!);
+      if (error) throw error;
+      logActivity({ entity: "client", entityId: id!, action: "deleted", metadata: { name: client?.client_name } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      toast({ title: "Client deleted" });
+      navigate("/clients");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   const startEdit = (field: string, currentValue: string) => {
     setEditingField(field);
     setEditValue(currentValue || "");
