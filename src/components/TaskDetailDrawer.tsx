@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -7,8 +8,18 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Clock, User, Building2, FileText, Globe, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Calendar, Clock, User, Building2, FileText, Globe, ExternalLink, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { logActivity } from "@/hooks/useActivityLog";
 
 const priorityConfig: Record<string, { label: string; color: string }> = {
   urgent: { label: "Urgent", color: "bg-destructive/20 text-destructive" },
@@ -58,6 +69,31 @@ function LinkRow({ label, url }: { label: string; url: string | null }) {
 }
 
 export default function TaskDetailDrawer({ task, open, onOpenChange }: TaskDetailDrawerProps) {
+  const { profile } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const isOwner = profile?.role === "owner";
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const deleteTask = useMutation({
+    mutationFn: async () => {
+      if (!task) return;
+      const { error } = await supabase.from("tasks").delete().eq("id", task.id);
+      if (error) throw error;
+      logActivity({ entity: "task", entityId: task.id, action: "deleted", metadata: { title: task.task_title } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
+      toast({ title: "Task deleted" });
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   if (!task) return null;
 
   const priority = priorityConfig[task.priority || "medium"];
@@ -67,72 +103,103 @@ export default function TaskDetailDrawer({ task, open, onOpenChange }: TaskDetai
   const hasLinks = task.website_link || task.gmb_link || task.meta_link;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
-        <SheetHeader className="pb-2">
-          <SheetTitle className="text-xl">{task.task_title}</SheetTitle>
-          <SheetDescription className="sr-only">Task details</SheetDescription>
-          <div className="flex items-center gap-2 pt-1">
-            <span className={cn("inline-block rounded-full px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider", priority.color)}>
-              {priority.label}
-            </span>
-            <span className={cn("inline-block rounded-full px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider", status.color)}>
-              {status.label}
-            </span>
-          </div>
-        </SheetHeader>
-
-        <Separator className="my-4" />
-
-        <div className="space-y-1">
-          <DetailRow icon={Building2} label="Client">
-            {clientName}
-          </DetailRow>
-          <DetailRow icon={User} label="Assigned To">
-            {assignedName}
-          </DetailRow>
-          <DetailRow icon={Calendar} label="Deadline">
-            {task.deadline ? new Date(task.deadline).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" }) : "—"}
-          </DetailRow>
-          {task.start_date && (
-            <DetailRow icon={Calendar} label="Start Date">
-              {new Date(task.start_date).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
-            </DetailRow>
-          )}
-          {task.completed_at && (
-            <DetailRow icon={Clock} label="Completed At">
-              {new Date(task.completed_at).toLocaleString()}
-            </DetailRow>
-          )}
-        </div>
-
-        {task.notes && (
-          <>
-            <Separator className="my-4" />
-            <DetailRow icon={FileText} label="Notes">
-              <p className="whitespace-pre-wrap text-muted-foreground">{task.notes}</p>
-            </DetailRow>
-          </>
-        )}
-
-        {hasLinks && (
-          <>
-            <Separator className="my-4" />
-            <p className="font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-2">Links</p>
-            <div className="flex flex-col gap-2">
-              <LinkRow label="Website" url={task.website_link} />
-              <LinkRow label="Google Business" url={task.gmb_link} />
-              <LinkRow label="Meta Business" url={task.meta_link} />
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+          <SheetHeader className="pb-2">
+            <SheetTitle className="text-xl">{task.task_title}</SheetTitle>
+            <SheetDescription className="sr-only">Task details</SheetDescription>
+            <div className="flex items-center gap-2 pt-1">
+              <span className={cn("inline-block rounded-full px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider", priority.color)}>
+                {priority.label}
+              </span>
+              <span className={cn("inline-block rounded-full px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider", status.color)}>
+                {status.label}
+              </span>
             </div>
-          </>
-        )}
+          </SheetHeader>
 
-        <Separator className="my-4" />
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Created {task.created_at ? new Date(task.created_at).toLocaleDateString() : "—"}</span>
-          <span>Updated {task.updated_at ? new Date(task.updated_at).toLocaleDateString() : "—"}</span>
-        </div>
-      </SheetContent>
-    </Sheet>
+          <Separator className="my-4" />
+
+          <div className="space-y-1">
+            <DetailRow icon={Building2} label="Client">
+              {clientName}
+            </DetailRow>
+            <DetailRow icon={User} label="Assigned To">
+              {assignedName}
+            </DetailRow>
+            <DetailRow icon={Calendar} label="Deadline">
+              {task.deadline ? new Date(task.deadline).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" }) : "—"}
+            </DetailRow>
+            {task.start_date && (
+              <DetailRow icon={Calendar} label="Start Date">
+                {new Date(task.start_date).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
+              </DetailRow>
+            )}
+            {task.completed_at && (
+              <DetailRow icon={Clock} label="Completed At">
+                {new Date(task.completed_at).toLocaleString()}
+              </DetailRow>
+            )}
+          </div>
+
+          {task.notes && (
+            <>
+              <Separator className="my-4" />
+              <DetailRow icon={FileText} label="Notes">
+                <p className="whitespace-pre-wrap text-muted-foreground">{task.notes}</p>
+              </DetailRow>
+            </>
+          )}
+
+          {hasLinks && (
+            <>
+              <Separator className="my-4" />
+              <p className="font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-2">Links</p>
+              <div className="flex flex-col gap-2">
+                <LinkRow label="Website" url={task.website_link} />
+                <LinkRow label="Google Business" url={task.gmb_link} />
+                <LinkRow label="Meta Business" url={task.meta_link} />
+              </div>
+            </>
+          )}
+
+          <Separator className="my-4" />
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Created {task.created_at ? new Date(task.created_at).toLocaleDateString() : "—"}</span>
+            <span>Updated {task.updated_at ? new Date(task.updated_at).toLocaleDateString() : "—"}</span>
+          </div>
+
+          {isOwner && (
+            <>
+              <Separator className="my-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-destructive/30 text-destructive hover:bg-destructive/10"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" /> Delete Task
+              </Button>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete task "{task.task_title}"?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently delete this task. This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deleteTask.isPending} onClick={(e) => { e.preventDefault(); deleteTask.mutate(); }}>
+              {deleteTask.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
