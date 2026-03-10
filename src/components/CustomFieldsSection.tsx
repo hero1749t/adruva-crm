@@ -93,7 +93,12 @@ export function CustomFieldsSection({ entityType, entityId }: CustomFieldsSectio
 
   const getFieldValue = (defId: string): string => {
     const v = values.find((val) => val.field_definition_id === defId);
-    return v?.value != null ? String(v.value).replace(/^"|"$/g, "") : "";
+    if (v?.value == null) return "";
+    const raw = v.value;
+    if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+      return (raw as any).value ?? (raw as any).label ?? JSON.stringify(raw);
+    }
+    return String(raw).replace(/^"|"$/g, "");
   };
 
   const startEdit = (defId: string) => {

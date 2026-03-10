@@ -42,7 +42,14 @@ export function useCustomFieldValues(entityType: "lead" | "client", entityIds: s
       const map: Record<string, Record<string, string>> = {};
       for (const row of data || []) {
         if (!map[row.entity_id]) map[row.entity_id] = {};
-        map[row.entity_id][row.field_definition_id] = row.value != null ? String(row.value).replace(/^"|"$/g, "") : "";
+        const raw = row.value;
+        if (raw == null) {
+          map[row.entity_id][row.field_definition_id] = "";
+        } else if (typeof raw === "object" && !Array.isArray(raw)) {
+          map[row.entity_id][row.field_definition_id] = (raw as any).value ?? (raw as any).label ?? JSON.stringify(raw);
+        } else {
+          map[row.entity_id][row.field_definition_id] = String(raw).replace(/^"|"$/g, "");
+        }
       }
       return map;
     },
