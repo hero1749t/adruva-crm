@@ -411,6 +411,9 @@ const LeadsPage = () => {
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Assigned To</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Source</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Created</th>
+              {customFieldDefs.map((def) => (
+                <th key={def.id} className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">{def.label}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
