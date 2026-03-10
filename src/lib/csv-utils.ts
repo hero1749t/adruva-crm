@@ -8,6 +8,8 @@ const CSV_HEADERS = [
   "company_name",
   "source",
   "service_interest",
+  "business_type",
+  "budget",
   "status",
   "notes",
 ] as const;
