@@ -88,7 +88,7 @@ const ClientsPage = () => {
           </p>
         </div>
         {isOwnerOrAdmin && (
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => exportClientsCsv(clients, customFieldDefs, customFieldValues)}>
             <Download className="h-4 w-4" /> Export
           </Button>
         )}
