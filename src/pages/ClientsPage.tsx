@@ -108,11 +108,16 @@ const ClientsPage = () => {
             {totalCount} {isOwnerOrAdmin ? "" : "assigned "}client{totalCount !== 1 ? "s" : ""}
           </p>
         </div>
-        {isOwnerOrAdmin && (
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => exportClientsCsv(clients, customFieldDefs, customFieldValues)}>
-            <Download className="h-4 w-4" /> Export
+        <div className="flex items-center gap-2">
+          {isOwnerOrAdmin && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => exportClientsCsv(clients, customFieldDefs, customFieldValues)}>
+              <Download className="h-4 w-4" /> Export
+            </Button>
+          )}
+          <Button size="sm" className="gap-2" onClick={() => setShowNewClient(true)}>
+            <Plus className="h-4 w-4" /> New Client
           </Button>
-        )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
