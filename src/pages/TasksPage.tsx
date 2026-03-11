@@ -390,8 +390,24 @@ const TasksPage = () => {
                     )}
                     <td className="px-4 py-3 font-medium text-foreground">{task.task_title}</td>
                     <td className="px-4 py-3 text-muted-foreground">{clientName}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider ${priorityConf.color}`}>{priorityConf.label}</span>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={task.priority || "medium"}
+                        onValueChange={(v) => {
+                          const oldPriority = task.priority || "medium";
+                          supabase.from("tasks").update({ priority: v as any }).eq("id", task.id).then(() => {
+                            queryClient.invalidateQueries({ queryKey: ["tasks"] });
+                            logActivity({ entity: "task", entityId: task.id, action: "priority_changed", metadata: { title: task.task_title, from: oldPriority, to: v } });
+                          });
+                        }}
+                      >
+                        <SelectTrigger className={`h-7 w-[100px] border-none px-2.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider ${priorityConf.color}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(taskPriorityConfig).map(([key, config]) => (<SelectItem key={key} value={key}>{config.label}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <Select
