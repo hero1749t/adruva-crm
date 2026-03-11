@@ -32,6 +32,7 @@ import { sendStatusEmail } from "@/lib/send-status-email";
 import { notifyTaskAssigned } from "@/lib/email-notifications";
 import { cn } from "@/lib/utils";
 import TaskDetailDrawer from "@/components/TaskDetailDrawer";
+import NewTaskDialog from "@/components/NewTaskDialog";
 import { useDebounce } from "@/hooks/use-debounce";
 
 const taskPriorityConfig: Record<string, { label: string; color: string }> = {
@@ -65,6 +66,7 @@ const TasksPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bulkAssignTo, setBulkAssignTo] = useState("");
   const [detailTask, setDetailTask] = useState<any | null>(null);
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -245,12 +247,12 @@ const TasksPage = () => {
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Tasks</h1>
           <p className="mt-1 text-sm text-muted-foreground">{totalCount} tasks</p>
         </div>
-        {isOwnerOrAdmin && (
-          <div className="flex gap-2">
+        <div className="flex gap-2">
+          {isOwnerOrAdmin && (
             <Button variant="outline" size="sm" className="gap-2"><Download className="h-4 w-4" /> Export</Button>
-            <Button size="sm" className="gap-2"><Plus className="h-4 w-4" /> New Task</Button>
-          </div>
-        )}
+          )}
+          <Button size="sm" className="gap-2" onClick={() => setNewTaskOpen(true)}><Plus className="h-4 w-4" /> New Task</Button>
+        </div>
       </div>
 
       <div className="sticky top-0 z-10 -mx-6 bg-background px-6 pb-4 pt-2 space-y-4">
@@ -488,6 +490,7 @@ const TasksPage = () => {
       </AlertDialog>
 
       <TaskDetailDrawer task={detailTask} open={!!detailTask} onOpenChange={(open) => { if (!open) setDetailTask(null); }} />
+      <NewTaskDialog open={newTaskOpen} onOpenChange={setNewTaskOpen} defaultDate={new Date()} />
     </div>
   );
 };

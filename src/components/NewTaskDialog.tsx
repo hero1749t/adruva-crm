@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { logActivity } from "@/hooks/useActivityLog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { notifyTaskAssigned } from "@/lib/email-notifications";
 import {
   Dialog,
@@ -34,7 +35,9 @@ interface NewTaskDialogProps {
 
 const NewTaskDialog = ({ open, onOpenChange, defaultDate }: NewTaskDialogProps) => {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
 
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState("");
@@ -68,6 +71,13 @@ const NewTaskDialog = ({ open, onOpenChange, defaultDate }: NewTaskDialogProps) 
   });
 
   const [assignedTo, setAssignedTo] = useState("");
+
+  // Auto-assign to self for team members
+  useEffect(() => {
+    if (open && !isOwnerOrAdmin && profile?.id) {
+      setAssignedTo(profile.id);
+    }
+  }, [open, isOwnerOrAdmin, profile?.id]);
 
   const createTask = useMutation({
     mutationFn: async () => {
@@ -177,21 +187,23 @@ const NewTaskDialog = ({ open, onOpenChange, defaultDate }: NewTaskDialogProps) 
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Assign to</Label>
-              <Select value={assignedTo} onValueChange={setAssignedTo}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teamMembers.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {isOwnerOrAdmin && (
+              <div className="space-y-2">
+                <Label>Assign to</Label>
+                <Select value={assignedTo} onValueChange={setAssignedTo}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
