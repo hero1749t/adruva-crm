@@ -72,6 +72,13 @@ const NewTaskDialog = ({ open, onOpenChange, defaultDate }: NewTaskDialogProps) 
 
   const [assignedTo, setAssignedTo] = useState("");
 
+  // Auto-assign to self for team members
+  useEffect(() => {
+    if (open && !isOwnerOrAdmin && profile?.id) {
+      setAssignedTo(profile.id);
+    }
+  }, [open, isOwnerOrAdmin, profile?.id]);
+
   const createTask = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.from("tasks").insert({
