@@ -490,6 +490,7 @@ const TasksPage = () => {
       </AlertDialog>
 
       <TaskDetailDrawer task={detailTask} open={!!detailTask} onOpenChange={(open) => { if (!open) setDetailTask(null); }} />
+      <NewTaskDialog open={newTaskOpen} onOpenChange={setNewTaskOpen} defaultDate={new Date()} />
     </div>
   );
 };
