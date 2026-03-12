@@ -38,6 +38,23 @@ const LoginPage = () => {
     setLoading(false);
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setResetLoading(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    setResetLoading(false);
+    if (error) {
+      setError(error.message);
+    } else {
+      setResetSent(true);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="pointer-events-none fixed -top-48 right-0 h-[600px] w-[600px] rounded-full bg-primary/5 blur-3xl" />
