@@ -23,13 +23,15 @@ export function SparklineMetricCard({
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30 ${onClick ? "cursor-pointer" : ""}`}
-      style={{ animationDelay: `${Math.random() * 200}ms` }}
+      className={`group relative overflow-hidden rounded-2xl glass p-5 transition-all duration-300 hover:glow hover:border-primary/30 ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
     >
-      <div className="flex items-center justify-between gap-3">
+      {/* Subtle gradient overlay on hover */}
+      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      
+      <div className="relative flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-110 ${color}`}>
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${color}`}>
             <Icon className="h-5 w-5" />
           </div>
           <div>
@@ -38,14 +40,14 @@ export function SparklineMetricCard({
           </div>
         </div>
         {chartData.length > 1 && (
-          <div className="h-10 w-20 opacity-60 group-hover:opacity-100 transition-opacity">
+          <div className="h-10 w-20 opacity-50 group-hover:opacity-100 transition-opacity duration-300">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <Line
                   type="monotone"
                   dataKey="v"
                   stroke={sparkColor}
-                  strokeWidth={1.5}
+                  strokeWidth={2}
                   dot={false}
                   isAnimationActive={true}
                   animationDuration={1200}
