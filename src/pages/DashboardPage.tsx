@@ -28,10 +28,11 @@ const FUNNEL_COLORS = [
   "hsl(160, 84%, 39%)", "hsl(142, 71%, 45%)",
 ];
 const TOOLTIP_STYLE = {
-  background: "hsl(218, 49%, 13%)",
-  border: "1px solid hsl(213, 50%, 24%)",
-  borderRadius: 8,
-  color: "hsl(214, 32%, 91%)",
+  background: "hsl(222, 47%, 10%)",
+  border: "1px solid hsl(222, 30%, 22%)",
+  borderRadius: 12,
+  color: "hsl(210, 40%, 96%)",
+  backdropFilter: "blur(16px)",
 };
 
 function getRangeDays(range: DateRange) {
@@ -281,21 +282,21 @@ const DashboardPage = () => {
 
       {overdueTasks > 0 && (
         <div
-          className="flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/10 px-5 py-3.5 cursor-pointer transition-colors hover:bg-destructive/15 animate-fade-in"
+          className="flex items-center justify-between rounded-2xl glass border-destructive/20 bg-destructive/[0.08] px-5 py-3.5 cursor-pointer transition-all hover:bg-destructive/[0.12] hover:shadow-lg hover:shadow-destructive/5 animate-fade-in"
           onClick={() => navigate("/tasks?status=overdue")}
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/15">
               <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
             <div>
               <p className="text-sm font-semibold text-destructive">
                 {overdueTasks} overdue task{overdueTasks !== 1 ? "s" : ""} need attention
               </p>
-              <p className="text-xs text-destructive/70">Click to view and resolve overdue tasks</p>
+              <p className="text-xs text-destructive/60">Click to view and resolve overdue tasks</p>
             </div>
           </div>
-          <ChevronRight className="h-5 w-5 text-destructive/50" />
+          <ChevronRight className="h-5 w-5 text-destructive/40" />
         </div>
       )}
 
@@ -396,7 +397,7 @@ const DashboardPage = () => {
       {/* Charts Row - Conditional based on role */}
       {isManager ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-lg">
+          <div className="rounded-2xl glass p-5 transition-all hover:glow-sm">
             <h3 className="mb-4 font-display text-base font-bold text-foreground">Lead Funnel</h3>
             <p className="mb-2 text-[10px] text-muted-foreground">Click a bar to filter leads</p>
             <ResponsiveContainer width="100%" height={220}>
@@ -418,7 +419,7 @@ const DashboardPage = () => {
             </ResponsiveContainer>
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-lg">
+          <div className="rounded-2xl glass p-5 transition-all hover:glow-sm">
             <h3 className="mb-4 font-display text-base font-bold text-foreground">Client Status</h3>
             <p className="mb-2 text-[10px] text-muted-foreground">Click a slice to filter clients</p>
             <ResponsiveContainer width="100%" height={220}>
@@ -442,7 +443,7 @@ const DashboardPage = () => {
       ) : (
         // Team member - Personal task breakdown and lead status
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-lg">
+          <div className="rounded-2xl glass p-5 transition-all hover:glow-sm">
             <h3 className="mb-4 font-display text-base font-bold text-foreground">My Task Status</h3>
             <p className="mb-2 text-[10px] text-muted-foreground">Breakdown of your assigned tasks</p>
             <ResponsiveContainer width="100%" height={220}>
@@ -463,7 +464,7 @@ const DashboardPage = () => {
             </ResponsiveContainer>
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-lg">
+          <div className="rounded-2xl glass p-5 transition-all hover:glow-sm">
             <h3 className="mb-4 font-display text-base font-bold text-foreground">My Lead Pipeline</h3>
             <p className="mb-2 text-[10px] text-muted-foreground">Status of leads assigned to you</p>
             {totalLeads === 0 ? (
@@ -495,7 +496,7 @@ const DashboardPage = () => {
 
       {/* Conversion Funnel - Manager only */}
       {isManager && (
-        <div className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-lg">
+        <div className="rounded-2xl glass p-5 transition-all hover:glow-sm">
           <div className="mb-4 flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-primary" />
             <div>
@@ -551,7 +552,7 @@ const DashboardPage = () => {
       )}
 
       {/* Task Completion Rate */}
-      <div className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-lg">
+      <div className="rounded-2xl glass p-5 transition-all hover:glow-sm">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-5 w-5 text-success" />
@@ -595,7 +596,7 @@ const DashboardPage = () => {
         {isManager && <TeamLeaderboard tasks={rangeTasks} dateRange={dateRange} />}
         <LiveActivityFeed />
         {!isManager && (
-          <div className="rounded-xl border border-border bg-card p-5">
+          <div className="rounded-2xl glass p-5">
             <div className="flex items-center gap-2 mb-4">
               <Target className="h-5 w-5 text-primary" />
               <h3 className="font-display text-base font-bold text-foreground">Quick Summary</h3>
@@ -624,7 +625,7 @@ const DashboardPage = () => {
 
       {/* Revenue Chart (owner only) */}
       {profile?.role === "owner" && (
-        <div className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-lg">
+        <div className="rounded-2xl glass p-5 transition-all hover:glow-sm">
           <h3 className="mb-4 font-display text-base font-bold text-foreground">Monthly Revenue</h3>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={revenueData}>

@@ -1,5 +1,4 @@
 import { Target, UserCheck, ClipboardList } from "lucide-react";
-import { Card } from "@/components/ui/card";
 
 interface MyWorkCardProps {
   leadsCount: number;
@@ -19,7 +18,7 @@ export function MyWorkCard({
   onTasksClick,
 }: MyWorkCardProps) {
   return (
-    <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 p-6">
+    <div className="overflow-hidden rounded-2xl glass glow-sm p-6">
       <div className="mb-4">
         <h3 className="font-display text-lg font-bold text-foreground">My Work</h3>
         <p className="text-xs text-muted-foreground">Quick overview of your assignments</p>
@@ -28,9 +27,9 @@ export function MyWorkCard({
       <div className="grid grid-cols-3 gap-4">
         <div
           onClick={onLeadsClick}
-          className="group cursor-pointer rounded-lg border border-border/50 bg-background/60 p-4 transition-all hover:border-primary/50 hover:bg-primary/5 hover:shadow-md"
+          className="group cursor-pointer rounded-xl glass-subtle p-4 transition-all hover:border-primary/40 hover:glow-sm"
         >
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 transition-colors group-hover:bg-primary/25">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 transition-all group-hover:bg-primary/25 group-hover:scale-110">
             <Target className="h-5 w-5 text-primary" />
           </div>
           <p className="font-mono text-2xl font-bold text-foreground">{leadsCount}</p>
@@ -41,9 +40,9 @@ export function MyWorkCard({
 
         <div
           onClick={onClientsClick}
-          className="group cursor-pointer rounded-lg border border-border/50 bg-background/60 p-4 transition-all hover:border-success/50 hover:bg-success/5 hover:shadow-md"
+          className="group cursor-pointer rounded-xl glass-subtle p-4 transition-all hover:border-success/40"
         >
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-success/15 transition-colors group-hover:bg-success/25">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-success/15 transition-all group-hover:bg-success/25 group-hover:scale-110">
             <UserCheck className="h-5 w-5 text-success" />
           </div>
           <p className="font-mono text-2xl font-bold text-foreground">{clientsCount}</p>
@@ -54,9 +53,9 @@ export function MyWorkCard({
 
         <div
           onClick={onTasksClick}
-          className="group cursor-pointer rounded-lg border border-border/50 bg-background/60 p-4 transition-all hover:border-warning/50 hover:bg-warning/5 hover:shadow-md"
+          className="group cursor-pointer rounded-xl glass-subtle p-4 transition-all hover:border-warning/40"
         >
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-warning/15 transition-colors group-hover:bg-warning/25">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-warning/15 transition-all group-hover:bg-warning/25 group-hover:scale-110">
             <ClipboardList className="h-5 w-5 text-warning" />
           </div>
           <p className="font-mono text-2xl font-bold text-foreground">{pendingTasksCount}</p>
@@ -65,6 +64,6 @@ export function MyWorkCard({
           </p>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

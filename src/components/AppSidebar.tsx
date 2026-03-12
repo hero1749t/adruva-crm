@@ -1,22 +1,9 @@
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Users,
-  UserCheck,
-  ClipboardList,
-  Calendar,
-  UsersRound,
-  Settings,
-  ScrollText,
-  ChevronLeft,
-  ChevronRight,
-  CreditCard,
-  BarChart3,
-  Zap,
-  Layers,
-  UserCog,
-  X,
+  LayoutDashboard, Users, UserCheck, ClipboardList, Calendar,
+  UsersRound, Settings, ScrollText, ChevronLeft, ChevronRight,
+  CreditCard, BarChart3, Zap, Layers, UserCog, X,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -70,66 +57,86 @@ export function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProps) {
   });
 
   const handleNavClick = () => {
-    if (isMobile && onMobileClose) {
-      onMobileClose();
-    }
+    if (isMobile && onMobileClose) onMobileClose();
   };
+
+  const NavContent = ({ isMobileView = false }: { isMobileView?: boolean }) => (
+    <>
+      <div className={cn(
+        "flex items-center gap-3 border-b border-border/50 px-4",
+        isMobileView ? "h-14 justify-between" : "h-16"
+      )}>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl gradient-primary font-display text-sm font-bold text-primary-foreground shadow-md shadow-primary/20">
+            A
+          </div>
+          {(!collapsed || isMobileView) && (
+            <span className="font-display text-lg font-bold tracking-tight text-foreground">
+              ADRUVA <span className="gradient-text">CRM</span>
+            </span>
+          )}
+        </div>
+        {isMobileView && (
+          <button onClick={onMobileClose} className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        {filteredItems.map((item, idx) => {
+          const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
+          const showDivider = item.dividerBefore && idx > 0;
+          return (
+            <div key={item.path}>
+              {showDivider && (
+                <div className={cn("my-3 border-t border-border/30", collapsed && !isMobileView && "mx-1")} />
+              )}
+              <Link
+                to={item.path}
+                onClick={handleNavClick}
+                className={cn(
+                  "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "glass bg-primary/10 text-primary shadow-sm shadow-primary/10"
+                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                )}
+                title={collapsed && !isMobileView ? item.label : undefined}
+              >
+                <item.icon className={cn(
+                  "h-[18px] w-[18px] shrink-0 transition-transform duration-200",
+                  isActive && "drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]",
+                  !isActive && "group-hover:scale-110"
+                )} />
+                {(!collapsed || isMobileView) && <span>{item.label}</span>}
+                {isActive && (!collapsed || isMobileView) && (
+                  <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary shadow-sm shadow-primary/50" />
+                )}
+              </Link>
+            </div>
+          );
+        })}
+      </nav>
+    </>
+  );
 
   // Mobile: overlay drawer
   if (isMobile) {
     return (
       <>
-        {/* Backdrop */}
         {mobileOpen && (
           <div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm transition-opacity"
             onClick={onMobileClose}
           />
         )}
-        {/* Drawer */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border bg-card transition-transform duration-300",
+            "fixed inset-y-0 left-0 z-50 flex w-72 flex-col glass-strong transition-transform duration-300",
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
-          <div className="flex h-14 items-center justify-between border-b border-border px-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary font-display text-sm font-bold text-primary-foreground">
-                A
-              </div>
-              <span className="font-display text-lg font-bold tracking-tight text-foreground">
-                ADRUVA <span className="text-primary">CRM</span>
-              </span>
-            </div>
-            <button onClick={onMobileClose} className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-4">
-            {filteredItems.map((item, idx) => {
-              const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
-              const showDivider = item.dividerBefore && idx > 0;
-              return (
-                <div key={item.path}>
-                  {showDivider && <div className="my-2 border-t border-border/50" />}
-                  <Link
-                    to={item.path}
-                    onClick={handleNavClick}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                      isActive
-                        ? "bg-primary/15 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <item.icon className="h-5 w-5 shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
-                </div>
-              );
-            })}
-          </nav>
+          <NavContent isMobileView />
         </aside>
       </>
     );
@@ -139,53 +146,17 @@ export function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        "relative flex flex-col border-r border-border bg-card transition-all duration-300",
-        collapsed ? "w-16" : "w-60"
+        "relative flex flex-col border-r border-border/50 bg-sidebar transition-all duration-300",
+        collapsed ? "w-[68px]" : "w-60"
       )}
     >
-      <div className="flex h-16 items-center gap-3 border-b border-border px-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary font-display text-sm font-bold text-primary-foreground">
-          A
-        </div>
-        {!collapsed && (
-          <span className="font-display text-lg font-bold tracking-tight text-foreground">
-            ADRUVA <span className="text-primary">CRM</span>
-          </span>
-        )}
-      </div>
-
-      <nav className="flex-1 space-y-0.5 px-2 py-4 overflow-y-auto">
-        {filteredItems.map((item, idx) => {
-          const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
-          const showDivider = item.dividerBefore && idx > 0;
-          return (
-            <div key={item.path}>
-              {showDivider && (
-                <div className={cn("my-2 border-t border-border/50", collapsed && "mx-1")} />
-              )}
-              <Link
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-                title={collapsed ? item.label : undefined}
-              >
-                <item.icon className="h-5 w-5 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            </div>
-          );
-        })}
-      </nav>
+      <NavContent />
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground"
+        className="absolute -right-3.5 top-20 flex h-7 w-7 items-center justify-center rounded-full glass-strong text-muted-foreground hover:text-foreground hover:shadow-md transition-all duration-200"
       >
-        {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+        {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
       </button>
     </aside>
   );

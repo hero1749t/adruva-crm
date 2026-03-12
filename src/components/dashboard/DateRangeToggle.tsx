@@ -13,15 +13,15 @@ const ranges: { value: DateRange; label: string }[] = [
 
 export function DateRangeToggle({ value, onChange }: DateRangeToggleProps) {
   return (
-    <div className="inline-flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
+    <div className="inline-flex items-center rounded-xl glass p-1 gap-0.5">
       {ranges.map((r) => (
         <button
           key={r.value}
           onClick={() => onChange(r.value)}
-          className={`rounded-md px-3 py-1 text-xs font-medium transition-all duration-200 ${
+          className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all duration-200 ${
             value === r.value
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "gradient-primary text-primary-foreground shadow-md shadow-primary/20"
+              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
           }`}
         >
           {r.label}
