@@ -351,7 +351,7 @@ describe('Integration Tests - Supabase', () => {
     });
 
     it('should handle invalid data types', () => {
-      const invoice = {
+      const invoice: any = {
         amount: 'not a number',
         isValid: false
       };

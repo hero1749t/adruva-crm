@@ -55,12 +55,12 @@ const insertNotifications = async (
   }
 };
 
-export const getNotificationRecipientsByRoles = async (roles: string[]) => {
+export const getNotificationRecipientsByRoles = async (roles: readonly ("admin" | "owner" | "task_manager" | "team")[]) => {
   const { data, error } = await supabase
     .from("profiles")
     .select("id, name, role")
     .eq("status", "active")
-    .in("role", roles)
+    .in("role", roles as unknown as string[])
     .order("name");
 
   if (error) {

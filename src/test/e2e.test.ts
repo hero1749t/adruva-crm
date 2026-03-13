@@ -140,15 +140,15 @@ describe('E2E - Complete User Workflows', () => {
       // Mark tasks as complete
       let completedCount = 0;
       tasks.forEach((task, index) => {
-        MockDatabase.updateTask = (id, updates) => {
-          const t = MockDatabase.tasks.find(tk => tk.id === id);
+        (MockDatabase as any).updateTask = (id: string, updates: any) => {
+          const t = MockDatabase.tasks.find((tk: any) => tk.id === id);
           if (t) Object.assign(t, updates);
           return t;
         };
         
         if (index < 2) {
-          tasks[index].status = 'completed';
-          tasks[index].completed_at = new Date().toISOString();
+          (tasks[index] as any).status = 'completed';
+          (tasks[index] as any).completed_at = new Date().toISOString();
           completedCount++;
         }
       });

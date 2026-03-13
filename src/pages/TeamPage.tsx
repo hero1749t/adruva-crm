@@ -395,7 +395,7 @@ const TeamPage = () => {
 
   const deleteMember = useMutation({
     mutationFn: async ({ userId, memberName, reassignTo }: { userId: string; memberName: string; reassignTo: string | null }) => {
-      const { error } = await supabase.rpc("delete_team_member", {
+      const { error } = await supabase.rpc("delete_team_member" as any, {
         p_user_id: userId,
         p_reassign_to: reassignTo,
       });
