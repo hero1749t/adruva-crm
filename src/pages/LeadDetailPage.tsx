@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyLeadAssigned, notifyClientCreated } from "@/lib/email-notifications";
+import { notifyLeadAssignmentInApp, notifyLeadWonInApp } from "@/lib/in-app-notifications";
 import { sendStatusEmail } from "@/lib/send-status-email";
 import { CommunicationLog } from "@/components/CommunicationLog";
 import { CustomFieldsSection } from "@/components/CustomFieldsSection";
@@ -131,6 +132,11 @@ const LeadDetailPage = () => {
         // If lead_won, notify about client creation
         if (updates.status === "lead_won") {
           const managerName = teamMembers.find((m) => m.id === lead?.assigned_to)?.name;
+          notifyLeadWonInApp({
+            leadName: lead?.name || "",
+            assignedManagerId: lead?.assigned_to,
+            assignedManagerName: managerName,
+          });
           notifyClientCreated({
             clientName: lead?.name || "",
             companyName: lead?.company_name,
@@ -140,6 +146,11 @@ const LeadDetailPage = () => {
       } else if (updates.assigned_to && updates.assigned_to !== lead?.assigned_to) {
         const member = teamMembers.find((m) => m.id === updates.assigned_to);
         logActivity({ entity: "lead", entityId: id!, action: "assigned", metadata: { name: lead?.name, to: member?.name } });
+        notifyLeadAssignmentInApp({
+          leadName: lead?.name || "",
+          assignedToId: updates.assigned_to as string,
+          assignedToName: member?.name,
+        });
         notifyLeadAssigned({
           leadName: lead?.name || "",
           assignedToId: updates.assigned_to as string,
@@ -149,6 +160,7 @@ const LeadDetailPage = () => {
         logActivity({ entity: "lead", entityId: id!, action: "updated", metadata: { name: lead?.name } });
       }
       invalidateLeadRelatedQueries(queryClient);
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
       toast({ title: "Lead updated" });
     },
     onError: (err: Error) => {

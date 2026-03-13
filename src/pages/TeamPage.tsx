@@ -359,22 +359,27 @@ const TeamPage = () => {
         throw new Error("Validation failed");
       }
       setFormErrors({});
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-team-member`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-          body: JSON.stringify(parsed.data),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed to create user");
-      if (formData.customRoleId && result.userId) {
-        await supabase.from("profiles").update({ custom_role_id: formData.customRoleId }).eq("id", result.userId);
+      const { data: userId, error } = await supabase.rpc("create_team_member", {
+        p_name: parsed.data.name,
+        p_email: parsed.data.email,
+        p_password: parsed.data.password,
+        p_role: parsed.data.role,
+      });
+
+      if (error || !userId) {
+        throw new Error(error?.message || "Failed to create user");
       }
-      return { ...result, name: parsed.data.name, role: parsed.data.role, email: parsed.data.email };
+
+      if (formData.customRoleId) {
+        const { error: customRoleError } = await supabase
+          .from("profiles")
+          .update({ custom_role_id: formData.customRoleId })
+          .eq("id", userId);
+        if (customRoleError) {
+          throw new Error(customRoleError.message);
+        }
+      }
+      return { userId, name: parsed.data.name, role: parsed.data.role, email: parsed.data.email };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["team"] });
@@ -390,19 +395,12 @@ const TeamPage = () => {
 
   const deleteMember = useMutation({
     mutationFn: async ({ userId, memberName, reassignTo }: { userId: string; memberName: string; reassignTo: string | null }) => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-team-member`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-          body: JSON.stringify({ userId, reassignTo }),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed to delete user");
-      return { ...result, memberName, userId };
+      const { error } = await supabase.rpc("delete_team_member", {
+        p_user_id: userId,
+        p_reassign_to: reassignTo,
+      });
+      if (error) throw new Error(error.message || "Failed to delete user");
+      return { memberName, userId, reassignedTo: reassignTo };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["team"] });

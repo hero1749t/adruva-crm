@@ -339,7 +339,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_team_member: {
+        Args: {
+          p_email: string
+          p_name: string
+          p_password: string
+          p_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: string
+      }
+      delete_team_member: {
+        Args: {
+          p_reassign_to?: string | null
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       billing_status: "due" | "paid" | "overdue"
@@ -353,7 +368,7 @@ export type Database = {
         | "lead_lost"
       task_priority: "urgent" | "high" | "medium" | "low"
       task_status: "pending" | "in_progress" | "completed" | "overdue"
-      user_role: "owner" | "admin" | "team"
+      user_role: "owner" | "admin" | "team" | "task_manager"
       user_status: "active" | "inactive"
     }
     CompositeTypes: {

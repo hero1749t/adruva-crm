@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/hooks/useActivityLog";
 import { sendStatusEmail } from "@/lib/send-status-email";
 import { notifyTaskAssigned } from "@/lib/email-notifications";
+import { notifyTaskAssignmentInApp } from "@/lib/in-app-notifications";
 import { cn } from "@/lib/utils";
 import TaskDetailDrawer from "@/components/TaskDetailDrawer";
 import NewTaskDialog from "@/components/NewTaskDialog";
@@ -179,12 +180,20 @@ const TasksPage = () => {
         for (const id of ids) {
           const task = tasks.find((t) => t.id === id);
           const clientName = (task as any)?.clients?.client_name;
+          notifyTaskAssignmentInApp({
+            taskId: id,
+            taskTitle: task?.task_title || "",
+            assignedToId: bulkAssignTo,
+            assignedToName: assigneeName,
+            clientName,
+          });
           notifyTaskAssigned({ taskTitle: task?.task_title || "", assignedToId: bulkAssignTo, assignedToName: assigneeName, clientName, deadline: task?.deadline });
         }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
       toast({ title: `${selected.size} task(s) reassigned` });
       clearSelection();
       setAssignDialogOpen(false);
@@ -443,8 +452,16 @@ const TasksPage = () => {
                               queryClient.invalidateQueries({ queryKey: ["tasks"] });
                               logActivity({ entity: "task", entityId: task.id, action: "assigned", metadata: { title: task.task_title, from: oldName, to: newName } });
                               if (newAssignedTo) {
+                                notifyTaskAssignmentInApp({
+                                  taskId: task.id,
+                                  taskTitle: task.task_title,
+                                  assignedToId: newAssignedTo,
+                                  assignedToName: newName,
+                                  clientName: (task as any).clients?.client_name,
+                                });
                                 notifyTaskAssigned({ taskTitle: task.task_title, assignedToId: newAssignedTo, assignedToName: newName, clientName: (task as any).clients?.client_name, deadline: task.deadline });
                               }
+                              queryClient.invalidateQueries({ queryKey: ["notifications"] });
                             });
                           }}
                         >

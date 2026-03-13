@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyTaskAssigned } from "@/lib/email-notifications";
+import { notifyTaskAssignmentInApp } from "@/lib/in-app-notifications";
 import {
   Dialog,
   DialogContent,
@@ -100,6 +101,13 @@ const NewTaskDialog = ({ open, onOpenChange, defaultDate }: NewTaskDialogProps) 
       if (assignedTo) {
         const member = teamMembers.find((m) => m.id === assignedTo);
         const client = clients.find((c) => c.id === clientId);
+        notifyTaskAssignmentInApp({
+          taskId: result.id,
+          taskTitle: title,
+          assignedToId: assignedTo,
+          assignedToName: member?.name,
+          clientName: client?.client_name,
+        });
         notifyTaskAssigned({
           taskTitle: title,
           assignedToId: assignedTo,
@@ -110,6 +118,7 @@ const NewTaskDialog = ({ open, onOpenChange, defaultDate }: NewTaskDialogProps) 
       }
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
       resetAndClose();
     },
     onError: (err: any) => {

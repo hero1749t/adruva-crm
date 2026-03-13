@@ -139,7 +139,10 @@ export function NotificationDropdown() {
                     {typeIcon[n.type] || <Bell className="h-4 w-4 text-muted-foreground" />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={cn("text-sm", !n.is_read ? "font-medium text-foreground" : "text-muted-foreground")}>
+                    <p className={cn("text-sm", !n.is_read ? "font-semibold text-foreground" : "text-foreground/80")}>
+                      {n.title}
+                    </p>
+                    <p className={cn("mt-0.5 text-sm", !n.is_read ? "font-medium text-foreground/90" : "text-muted-foreground")}>
                       {n.message}
                     </p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">

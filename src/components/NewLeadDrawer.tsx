@@ -8,6 +8,7 @@ import { Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyLeadAssigned } from "@/lib/email-notifications";
+import { notifyLeadAssignmentInApp } from "@/lib/in-app-notifications";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -112,6 +113,11 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
       const assignedId = form.getValues("assigned_to");
       if (assignedId) {
         const member = teamMembers.find((m) => m.id === assignedId);
+        notifyLeadAssignmentInApp({
+          leadName: result.name,
+          assignedToId: assignedId,
+          assignedToName: member?.name,
+        });
         notifyLeadAssigned({
           leadName: result.name,
           assignedToId: assignedId,

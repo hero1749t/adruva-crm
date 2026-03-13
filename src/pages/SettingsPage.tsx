@@ -42,6 +42,7 @@ import { OnboardingTemplatesSection } from "@/components/OnboardingChecklist";
 import { WeeklyReportPreviewButton } from "@/components/WeeklyReportPreview";
 import { ServiceTemplatesSettings } from "@/components/settings/ServiceTemplatesSettings";
 import { AutomationEngineSettings } from "@/components/settings/AutomationEngineSettings";
+import { sendWeeklyReport } from "@/lib/weekly-report";
 
 type TaskPriority = Database["public"]["Enums"]["task_priority"];
 
@@ -72,9 +73,16 @@ const SendWeeklyReportButton = () => {
   const handleSend = async () => {
     setSending(true);
     try {
-      const { error } = await supabase.functions.invoke("weekly-report");
-      if (error) throw error;
-      toast({ title: "Weekly report sent", description: "Emails have been sent to all active team members." });
+      const result = await sendWeeklyReport();
+      const sentCount = typeof result?.sent === "number" ? result.sent : null;
+      toast({
+        title: "Weekly report sent",
+        description:
+          result?.warning ||
+          (sentCount === null
+            ? "Emails have been sent to all active team members."
+            : `${sentCount} email${sentCount === 1 ? "" : "s"} sent successfully.`),
+      });
     } catch (err: any) {
       toast({ title: "Failed to send report", description: err.message || "Something went wrong", variant: "destructive" });
     } finally {
