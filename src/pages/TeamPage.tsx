@@ -359,7 +359,7 @@ const TeamPage = () => {
         throw new Error("Validation failed");
       }
       setFormErrors({});
-      const { data: userId, error } = await supabase.rpc("create_team_member", {
+      const { data: userId, error } = await supabase.rpc("create_team_member" as any, {
         p_name: parsed.data.name,
         p_email: parsed.data.email,
         p_password: parsed.data.password,
@@ -374,7 +374,7 @@ const TeamPage = () => {
         const { error: customRoleError } = await supabase
           .from("profiles")
           .update({ custom_role_id: formData.customRoleId })
-          .eq("id", userId);
+          .eq("id", userId as string);
         if (customRoleError) {
           throw new Error(customRoleError.message);
         }
@@ -386,7 +386,7 @@ const TeamPage = () => {
       toast({ title: "Team member created" });
       setFormData({ name: "", email: "", password: "", role: "team", customRoleId: "" });
       setDialogOpen(false);
-      logActivity({ entity: "team", entityId: data.userId, action: "member_created", metadata: { member_name: data.name, role: data.role, email: data.email } });
+      logActivity({ entity: "team", entityId: data.userId as string, action: "member_created", metadata: { member_name: data.name, role: data.role, email: data.email } });
     },
     onError: (err: Error) => {
       if (err.message !== "Validation failed") toast({ title: "Failed to create user", description: err.message, variant: "destructive" });
@@ -395,7 +395,7 @@ const TeamPage = () => {
 
   const deleteMember = useMutation({
     mutationFn: async ({ userId, memberName, reassignTo }: { userId: string; memberName: string; reassignTo: string | null }) => {
-      const { error } = await supabase.rpc("delete_team_member", {
+      const { error } = await supabase.rpc("delete_team_member" as any, {
         p_user_id: userId,
         p_reassign_to: reassignTo,
       });
