@@ -209,9 +209,11 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
       email: row.email.trim(),
       phone: row.phone.trim(),
       company_name: row.company_name?.trim() || null,
-      source: row.source?.trim() || null,
+      source: mapEnum(row.source, SOURCE_MAP),
       service_interest: row.service_interest?.trim() ? row.service_interest.trim().split(";").map(s => s.trim()) : null,
-      business_type: row.business_type?.trim() || null,
+      business_type: mapEnum(row.business_type, BUSINESS_TYPE_MAP),
+      budget: mapEnum(row.budget, BUDGET_MAP),
+      status: mapEnum(row.status, STATUS_MAP) || "new_lead",
       notes: row.notes?.trim() || null,
     });
 
