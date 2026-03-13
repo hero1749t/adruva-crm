@@ -1028,22 +1028,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_team_member: {
-        Args: {
-          p_email: string
-          p_name: string
-          p_password: string
-          p_role: Database["public"]["Enums"]["user_role"]
-        }
-        Returns: string
-      }
-      delete_team_member: {
-        Args: {
-          p_reassign_to?: string | null
-          p_user_id: string
-        }
-        Returns: undefined
-      }
       check_permission: {
         Args: { _action: string; _resource: string; _user_id: string }
         Returns: boolean

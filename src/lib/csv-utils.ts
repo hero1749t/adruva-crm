@@ -10,11 +10,47 @@ const CSV_HEADERS = [
   "source",
   "service_interest",
   "business_type",
+  "budget",
   "status",
   "notes",
 ] as const;
 
 const REQUIRED_FIELDS = ["name", "email", "phone"] as const;
+
+const BUDGET_MAP: Record<string, string> = {
+  "5k_10k": "5k_10k", "10k_25k": "10k_25k", "25k_50k": "25k_50k", "50k_1l": "50k_1l", "1l_plus": "1l_plus",
+};
+
+const STATUS_MAP: Record<string, string> = {
+  "new_lead": "new_lead", "new lead": "new_lead",
+  "audit_booked": "audit_booked", "free audit booked": "audit_booked", "audit booked": "audit_booked",
+  "audit_done": "audit_done", "audit done": "audit_done",
+  "in_progress": "in_progress", "in progress": "in_progress",
+  "lead_won": "lead_won", "lead won": "lead_won",
+  "lead_lost": "lead_lost", "lead lost": "lead_lost",
+};
+
+const SOURCE_MAP: Record<string, string> = {
+  "website_form": "website_form", "website": "website_form",
+  "whatsapp": "whatsapp",
+  "facebook_ads": "facebook_ads", "facebook": "facebook_ads",
+  "google_ads": "google_ads", "google ads": "google_ads",
+  "instagram": "instagram",
+  "referral": "referral",
+  "cold_call": "cold_call", "cold call": "cold_call",
+  "manual_entry": "manual_entry", "manual entry": "manual_entry",
+};
+
+const BUSINESS_TYPE_MAP: Record<string, string> = {
+  "restaurant": "restaurant", "clinic": "clinic", "real_estate": "real_estate", "real estate": "real_estate",
+  "ecommerce": "ecommerce", "education": "education", "gym_fitness": "gym_fitness", "gym": "gym_fitness",
+  "salon": "salon", "local_shop": "local_shop", "local shop": "local_shop", "corporate": "corporate", "other": "other",
+};
+
+function mapEnum(value: string | undefined, map: Record<string, string>): string | null {
+  if (!value?.trim()) return null;
+  return map[value.trim().toLowerCase()] || null;
+}
 
 function escapeCsvField(value: string): string {
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
@@ -173,9 +209,11 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
       email: row.email.trim(),
       phone: row.phone.trim(),
       company_name: row.company_name?.trim() || null,
-      source: row.source?.trim() || null,
+      source: mapEnum(row.source, SOURCE_MAP),
       service_interest: row.service_interest?.trim() ? row.service_interest.trim().split(";").map(s => s.trim()) : null,
-      business_type: row.business_type?.trim() || null,
+      business_type: mapEnum(row.business_type, BUSINESS_TYPE_MAP),
+      budget: mapEnum(row.budget, BUDGET_MAP),
+      status: mapEnum(row.status, STATUS_MAP) || "new_lead",
       notes: row.notes?.trim() || null,
     });
 
