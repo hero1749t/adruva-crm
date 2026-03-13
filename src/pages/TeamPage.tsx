@@ -359,7 +359,7 @@ const TeamPage = () => {
         throw new Error("Validation failed");
       }
       setFormErrors({});
-      const { data: userId, error } = await supabase.rpc("create_team_member", {
+      const { data: userId, error } = await supabase.rpc("create_team_member" as any, {
         p_name: parsed.data.name,
         p_email: parsed.data.email,
         p_password: parsed.data.password,
