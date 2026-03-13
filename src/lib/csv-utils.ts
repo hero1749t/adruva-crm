@@ -232,7 +232,10 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
   const CHUNK_SIZE = 50;
   for (let i = 0; i < validLeads.length; i += CHUNK_SIZE) {
     const chunk = validLeads.slice(i, i + CHUNK_SIZE);
-    const { data: inserted, error } = await supabase.from("leads").insert(chunk as any).select("id");
+    const { data: inserted, error } = await supabase
+      .from("leads")
+      .upsert(chunk as any, { onConflict: "email", ignoreDuplicates: true })
+      .select("id");
     if (error) {
       result.errors.push({
         row: i + 2,
