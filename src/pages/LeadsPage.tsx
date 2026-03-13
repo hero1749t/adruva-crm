@@ -417,6 +417,7 @@ const LeadsPage = () => {
                 </th>
               )}
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Name</th>
+              <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Email</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Company</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Phone</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Status</th>
@@ -461,6 +462,7 @@ const LeadsPage = () => {
                       </td>
                     )}
                     <td className="px-4 py-3 font-medium text-foreground">{lead.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{lead.email}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.company_name || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.phone}</td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
