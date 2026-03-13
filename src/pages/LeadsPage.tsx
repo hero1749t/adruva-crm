@@ -462,6 +462,7 @@ const LeadsPage = () => {
                       </td>
                     )}
                     <td className="px-4 py-3 font-medium text-foreground">{lead.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{lead.email}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.company_name || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.phone}</td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
