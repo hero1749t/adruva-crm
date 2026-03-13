@@ -374,7 +374,7 @@ const TeamPage = () => {
         const { error: customRoleError } = await supabase
           .from("profiles")
           .update({ custom_role_id: formData.customRoleId })
-          .eq("id", userId);
+          .eq("id", userId as string);
         if (customRoleError) {
           throw new Error(customRoleError.message);
         }
