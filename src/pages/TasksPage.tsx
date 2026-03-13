@@ -35,6 +35,8 @@ import { cn } from "@/lib/utils";
 import TaskDetailDrawer from "@/components/TaskDetailDrawer";
 import NewTaskDialog from "@/components/NewTaskDialog";
 import { useDebounce } from "@/hooks/use-debounce";
+import { getAssignmentVisibilityMode } from "@/lib/assignment-visibility";
+import { runPaymentAutomationSweep } from "@/lib/payment-automation";
 
 const taskPriorityConfig: Record<string, { label: string; color: string }> = {
   urgent: { label: "Urgent", color: "bg-destructive/20 text-destructive" },
@@ -48,6 +50,7 @@ const taskStatusConfig: Record<string, { label: string; color: string }> = {
   in_progress: { label: "In Progress", color: "bg-primary/20 text-primary" },
   completed: { label: "Completed", color: "bg-success/20 text-success" },
   overdue: { label: "Overdue", color: "bg-destructive/20 text-destructive" },
+  paused: { label: "Paused", color: "bg-warning/20 text-warning" },
 };
 
 const TasksPage = () => {
@@ -73,7 +76,12 @@ const TasksPage = () => {
   const queryClient = useQueryClient();
   const { can, isOwner, isAdmin } = usePermissions();
   const isOwnerOrAdmin = can("tasks", "create");
-  const showAssignedFilter = isOwner || isAdmin;
+  const showAssignedFilter = isOwner;
+  const visibilityMode = getAssignmentVisibilityMode(profile);
+
+  useEffect(() => {
+    runPaymentAutomationSweep().catch(() => undefined);
+  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ["tasks", viewFilter, statusFilter, priorityFilter, debouncedSearch, assignedFilter, dateFilter, page],
@@ -83,13 +91,19 @@ const TasksPage = () => {
 
       let query = supabase
         .from("tasks")
-        .select("*, clients!tasks_client_id_fkey(client_name), profiles!tasks_assigned_to_fkey(name)", { count: "exact" })
+        .select("*, clients!tasks_client_id_fkey(client_name, company_name), profiles!tasks_assigned_to_fkey(name)", { count: "exact" })
         .order("deadline", { ascending: true })
         .range(from, to);
 
+      if (visibilityMode === "own_only" && profile?.id) {
+        query = query.eq("assigned_to", profile.id);
+      } else if (visibilityMode === "own_or_unassigned" && profile?.id) {
+        query = query.or(`assigned_to.eq.${profile.id},assigned_to.is.null`);
+      }
+
       // Apply view filter (active vs completed)
       if (viewFilter === "active") {
-        query = query.in("status", ["pending", "in_progress", "overdue"]);
+        query = query.in("status", ["pending", "in_progress", "overdue", "paused"]);
       } else {
         query = query.eq("status", "completed");
       }
@@ -97,7 +111,7 @@ const TasksPage = () => {
       if (statusFilter !== "all") query = query.eq("status", statusFilter as any);
       if (priorityFilter !== "all") query = query.eq("priority", priorityFilter as any);
       if (debouncedSearch) query = query.ilike("task_title", `%${debouncedSearch}%`);
-      if (assignedFilter !== "all") {
+      if (visibilityMode === "all" && assignedFilter !== "all") {
         if (assignedFilter === "unassigned") {
           query = query.is("assigned_to", null);
         } else {
@@ -254,7 +268,9 @@ const TasksPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Tasks</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{totalCount} tasks</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {totalCount} {visibilityMode === "all" ? "total" : "assigned"} task{totalCount !== 1 ? "s" : ""}
+          </p>
         </div>
         <div className="flex gap-2">
           {isOwnerOrAdmin && (
@@ -297,7 +313,7 @@ const TasksPage = () => {
         )}
 
         <div className="flex flex-wrap items-center gap-3">
-        {profile?.id && (
+        {profile?.id && profile.role === "owner" && (
           <Button
             variant={assignedFilter === profile.id ? "default" : "outline"}
             size="sm"
@@ -379,7 +395,7 @@ const TasksPage = () => {
                 const priorityConf = taskPriorityConfig[task.priority || "medium"];
                 const statusConf = taskStatusConfig[task.status || "pending"];
                 const isOverdue = task.status === "overdue";
-                const clientName = (task as any).clients?.client_name || "—";
+                const clientName = task.business_name || (task as any).clients?.company_name || (task as any).clients?.client_name || "—";
                 const assignedName = (task as any).profiles?.name || "Unassigned";
                 const isSelected = selected.has(task.id);
                 return (
@@ -398,7 +414,12 @@ const TasksPage = () => {
                       </td>
                     )}
                     <td className="px-4 py-3 font-medium text-foreground">{task.task_title}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{clientName}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      <div>{clientName}</div>
+                      {task.service_template_name && (
+                        <div className="text-[10px] uppercase tracking-wider text-primary">{task.service_template_name}</div>
+                      )}
+                    </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <Select
                         value={task.priority || "medium"}

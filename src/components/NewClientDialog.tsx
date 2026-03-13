@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/hooks/useActivityLog";
+import { executeAutomationRules } from "@/lib/automation-engine";
+import { applyServiceTemplateToClient } from "@/lib/service-template-assignments";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +16,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PropertyMultiSelect } from "@/components/PropertyMultiSelect";
+import { useEntityPropertyOptions } from "@/lib/property-options";
 
 interface NewClientDialogProps {
   open: boolean;
@@ -27,31 +36,35 @@ const NewClientDialog = ({ open, onOpenChange }: NewClientDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [serviceInput, setServiceInput] = useState("");
+  const { sourceOptions, businessTypeOptions, serviceInterestOptions } = useEntityPropertyOptions("client");
+  const { data: serviceTemplates = [] } = useQuery({
+    queryKey: ["service-templates-select"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("service_templates")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open,
+  });
   const [form, setForm] = useState({
     client_name: "",
     email: "",
     phone: "",
     company_name: "",
+    source: "",
+    business_type: "",
     plan: "",
     monthly_payment: "",
     services: [] as string[],
+    service_templates: [] as string[],
   });
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const addService = () => {
-    const trimmed = serviceInput.trim();
-    if (trimmed && !form.services.includes(trimmed)) {
-      setForm((prev) => ({ ...prev, services: [...prev.services, trimmed] }));
-      setServiceInput("");
-    }
-  };
-
-  const removeService = (service: string) => {
-    setForm((prev) => ({ ...prev, services: prev.services.filter((s) => s !== service) }));
   };
 
   const handleSubmit = async () => {
@@ -68,11 +81,13 @@ const NewClientDialog = ({ open, onOpenChange }: NewClientDialogProps) => {
           email: form.email.trim(),
           phone: form.phone.trim() || null,
           company_name: form.company_name.trim() || null,
+          source: form.source || null,
+          business_type: form.business_type || null,
           plan: form.plan.trim() || null,
           monthly_payment: form.monthly_payment ? Number(form.monthly_payment) : null,
           services: form.services.length > 0 ? form.services : null,
           assigned_manager: user?.id,
-          status: "active",
+          status: "new",
           billing_status: "due",
           start_date: new Date().toISOString().slice(0, 10),
         })
@@ -81,16 +96,60 @@ const NewClientDialog = ({ open, onOpenChange }: NewClientDialogProps) => {
 
       if (error) throw error;
 
+      for (const templateId of form.service_templates) {
+        await applyServiceTemplateToClient({
+          clientId: data.id,
+          templateId,
+          assignedManager: user?.id || null,
+          appliedBy: user?.id || null,
+          businessName: form.company_name.trim() || form.client_name.trim(),
+        });
+      }
+
       logActivity({
         entity: "client",
         entityId: data.id,
         action: "created",
         metadata: { name: form.client_name },
       });
+      executeAutomationRules({
+        triggerEvent: "client_created",
+        entityId: data.id,
+        entityData: {
+          _entity_type: "client",
+          id: data.id,
+          name: form.client_name.trim(),
+          client_name: form.client_name.trim(),
+          email: form.email.trim(),
+          assigned_manager: user?.id || null,
+          status: "new",
+          plan: form.plan.trim() || null,
+          source: form.source || null,
+          business_type: form.business_type || null,
+        },
+      });
 
-      toast({ title: `Client "${form.client_name}" added successfully` });
+      toast({
+        title: `Client "${form.client_name}" added successfully`,
+        description: form.service_templates.length > 0
+          ? `${form.service_templates.length} template(s) assigned and tasks created`
+          : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
-      setForm({ client_name: "", email: "", phone: "", company_name: "", plan: "", monthly_payment: "", services: [] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
+      setForm({
+        client_name: "",
+        email: "",
+        phone: "",
+        company_name: "",
+        source: "",
+        business_type: "",
+        plan: "",
+        monthly_payment: "",
+        services: [],
+        service_templates: [],
+      });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Failed to add client", description: err.message, variant: "destructive" });
@@ -135,30 +194,58 @@ const NewClientDialog = ({ open, onOpenChange }: NewClientDialogProps) => {
               <Input id="monthly_payment" type="number" min="0" value={form.monthly_payment} onChange={(e) => handleChange("monthly_payment", e.target.value)} placeholder="e.g. 15000" />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>Services</Label>
-            <div className="flex gap-2">
-              <Input
-                value={serviceInput}
-                onChange={(e) => setServiceInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addService(); } }}
-                placeholder="Type service & press Enter"
-                className="flex-1"
-              />
-              <Button type="button" variant="outline" size="sm" onClick={addService} className="shrink-0">Add</Button>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Source</Label>
+              <Select value={form.source} onValueChange={(value) => handleChange("source", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sourceOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            {form.services.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {form.services.map((s) => (
-                  <Badge key={s} variant="secondary" className="gap-1 pr-1">
-                    {s}
-                    <button type="button" onClick={() => removeService(s)} className="rounded-full p-0.5 hover:bg-muted">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label>Business Type</Label>
+              <Select value={form.business_type} onValueChange={(value) => handleChange("business_type", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select business type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {businessTypeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Service Interested</Label>
+            <PropertyMultiSelect
+              options={serviceInterestOptions}
+              value={form.services}
+              onChange={(value) => setForm((prev) => ({ ...prev, services: value }))}
+              placeholder="Select interested services"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Service Templates</Label>
+            <PropertyMultiSelect
+              options={serviceTemplates.map((template) => ({ value: template.id, label: template.name }))}
+              value={form.service_templates}
+              onChange={(value) => setForm((prev) => ({ ...prev, service_templates: value }))}
+              placeholder="Select one or more templates"
+            />
+            <p className="text-xs text-muted-foreground">
+              Selected templates will create client tasks immediately and also show in calendar.
+            </p>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

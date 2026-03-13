@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyLeadAssigned } from "@/lib/email-notifications";
 import { notifyLeadAssignmentInApp } from "@/lib/in-app-notifications";
+import { executeAutomationRules } from "@/lib/automation-engine";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +20,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { PropertyMultiSelect } from "@/components/PropertyMultiSelect";
+import { useEntityPropertyOptions } from "@/lib/property-options";
 
 const phoneRegex = /^[+]?[\d\s\-()]{7,15}$/;
 
@@ -28,17 +31,13 @@ const leadSchema = z.object({
   phone: z.string().trim().min(1, "Phone is required").regex(phoneRegex, "Invalid phone number"),
   company_name: z.string().trim().max(100, "Max 100 characters").optional().or(z.literal("")),
   source: z.string().optional().or(z.literal("")),
-  service_interest: z.string().trim().max(200, "Max 200 characters").optional().or(z.literal("")),
+  service_interest: z.array(z.string()).optional().default([]),
   assigned_to: z.string().optional().or(z.literal("")),
   notes: z.string().trim().max(1000, "Max 1000 characters").optional().or(z.literal("")),
   business_type: z.string().optional().or(z.literal("")),
 });
 
 type LeadFormValues = z.infer<typeof leadSchema>;
-
-const sourceOptions = [
-  "google", "meta", "referral", "website", "cold_call", "event", "other",
-];
 
 interface NewLeadDrawerProps {
   open: boolean;
@@ -51,6 +50,7 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
   const { toast } = useToast();
   const [emailChecking, setEmailChecking] = useState(false);
   const [emailExists, setEmailExists] = useState(false);
+  const { sourceOptions, businessTypeOptions, serviceInterestOptions } = useEntityPropertyOptions("lead");
 
   const { data: teamMembers = [] } = useQuery({
     queryKey: ["team-members"],
@@ -68,7 +68,7 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
     resolver: zodResolver(leadSchema),
     defaultValues: {
       name: "", email: "", phone: "", company_name: "",
-      source: "", service_interest: "", assigned_to: "", notes: "",
+      source: "", service_interest: [], assigned_to: "", notes: "", business_type: "",
     },
   });
 
@@ -97,7 +97,7 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
         phone: values.phone.trim(),
         company_name: values.company_name?.trim() || null,
         source: values.source || null,
-        service_interest: values.service_interest?.trim() ? [values.service_interest.trim()] : null,
+        service_interest: values.service_interest?.length ? values.service_interest : null,
         assigned_to: values.assigned_to || null,
         notes: values.notes?.trim() || null,
         business_type: values.business_type || null,
@@ -107,6 +107,19 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
     },
     onSuccess: (result) => {
       logActivity({ entity: "lead", entityId: result.id, action: "created", metadata: { name: result.name } });
+      executeAutomationRules({
+        triggerEvent: "lead_created",
+        entityId: result.id,
+        entityData: {
+          _entity_type: "lead",
+          id: result.id,
+          name: result.name,
+          assigned_to: form.getValues("assigned_to") || null,
+          status: "new_lead",
+          email: form.getValues("email"),
+          source: form.getValues("source") || null,
+        },
+      });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast({ title: "Lead created successfully" });
       // Notify assigned member
@@ -230,9 +243,26 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
                 <SelectValue placeholder="Select source" />
               </SelectTrigger>
               <SelectContent>
-                {sourceOptions.map((s) => (
-                  <SelectItem key={s} value={s} className="capitalize">
-                    {s.replace("_", " ")}
+                {sourceOptions.map((sourceOption) => (
+                  <SelectItem key={sourceOption.value} value={sourceOption.value}>
+                    {sourceOption.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Business Type */}
+          <div className="space-y-1.5">
+            <FieldLabel label="Business Type" />
+            <Select value={watch("business_type") || ""} onValueChange={(v) => setValue("business_type", v)}>
+              <SelectTrigger className="border-border bg-muted/30">
+                <SelectValue placeholder="Select business type" />
+              </SelectTrigger>
+              <SelectContent>
+                {businessTypeOptions.map((businessTypeOption) => (
+                  <SelectItem key={businessTypeOption.value} value={businessTypeOption.value}>
+                    {businessTypeOption.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -242,11 +272,11 @@ const NewLeadDrawer = ({ open, onOpenChange }: NewLeadDrawerProps) => {
           {/* Service Interest */}
           <div className="space-y-1.5">
             <FieldLabel label="Service Interest" />
-            <Input
-              {...register("service_interest")}
-              placeholder="e.g. SEO, Google Ads, Web Design"
-              className="border-border bg-muted/30"
-              maxLength={200}
+            <PropertyMultiSelect
+              options={serviceInterestOptions}
+              value={watch("service_interest") || []}
+              onChange={(values) => setValue("service_interest", values)}
+              placeholder="Select interested services"
             />
           </div>
 

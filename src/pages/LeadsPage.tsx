@@ -35,7 +35,11 @@ import LeadsKanbanView from "@/components/leads/LeadsKanbanView";
 import { exportLeadsCsv } from "@/lib/csv-utils";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useCustomFieldDefs, useCustomFieldValues } from "@/hooks/useCustomFields";
+import { useCustomFieldDefs, useCustomFieldValues, useCustomFieldValuesRaw } from "@/hooks/useCustomFields";
+import { getAssignmentVisibilityMode } from "@/lib/assignment-visibility";
+import { useEntityPropertyOptions } from "@/lib/property-options";
+import { InlineEditableCell } from "@/components/InlineEditableCell";
+import { CustomFieldTableCell } from "@/components/CustomFieldTableCell";
 
 const leadStatusConfig: Record<string, { label: string; color: string }> = {
   new_lead: { label: "New Lead", color: "bg-muted text-muted-foreground" },
@@ -45,6 +49,16 @@ const leadStatusConfig: Record<string, { label: string; color: string }> = {
   lead_won: { label: "Lead Won", color: "bg-success/20 text-success" },
   lead_lost: { label: "Lead Lost", color: "bg-destructive/20 text-destructive" },
 };
+
+const leadStatusTabs = [
+  { key: "all", label: "All Leads" },
+  { key: "new_lead", label: "New Lead" },
+  { key: "audit_booked", label: "Audit Booked" },
+  { key: "audit_done", label: "Audit Done" },
+  { key: "in_progress", label: "In Progress" },
+  { key: "lead_won", label: "Lead Won" },
+  { key: "lead_lost", label: "Lead Lost" },
+];
 
 function invalidateLeadRelatedQueries(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: ["leads"] });
@@ -80,7 +94,9 @@ const LeadsPage = () => {
   const { can, isOwner, isAdmin } = usePermissions();
   const isOwnerOrAdmin = can("leads", "create");
   const canDeleteLeads = can("leads", "delete");
-  const showAssignedFilter = isOwner || isAdmin;
+  const showAssignedFilter = isOwner;
+  const visibilityMode = getAssignmentVisibilityMode(profile);
+  const { sourceOptions, businessTypeOptions } = useEntityPropertyOptions("lead");
 
   const { data, isLoading } = useQuery({
     queryKey: ["leads", statusFilter, debouncedSearch, assignedFilter, dateFilter, page],
@@ -95,8 +111,14 @@ const LeadsPage = () => {
         .order("created_at", { ascending: false })
         .range(from, to);
 
+      if (visibilityMode === "own_only" && profile?.id) {
+        query = query.eq("assigned_to", profile.id);
+      } else if (visibilityMode === "own_or_unassigned" && profile?.id) {
+        query = query.or(`assigned_to.eq.${profile.id},assigned_to.is.null`);
+      }
+
       if (statusFilter !== "all") query = query.eq("status", statusFilter as any);
-      if (assignedFilter !== "all") {
+      if (visibilityMode === "all" && assignedFilter !== "all") {
         if (assignedFilter === "unassigned") {
           query = query.is("assigned_to", null);
         } else {
@@ -145,8 +167,14 @@ const LeadsPage = () => {
         .eq("is_deleted", false)
         .order("created_at", { ascending: false });
 
+      if (visibilityMode === "own_only" && profile?.id) {
+        query = query.eq("assigned_to", profile.id);
+      } else if (visibilityMode === "own_or_unassigned" && profile?.id) {
+        query = query.or(`assigned_to.eq.${profile.id},assigned_to.is.null`);
+      }
+
       if (statusFilter !== "all") query = query.eq("status", statusFilter as any);
-      if (assignedFilter !== "all") {
+      if (visibilityMode === "all" && assignedFilter !== "all") {
         if (assignedFilter === "unassigned") query = query.is("assigned_to", null);
         else query = query.eq("assigned_to", assignedFilter);
       }
@@ -173,6 +201,21 @@ const LeadsPage = () => {
   const { data: customFieldDefs = [] } = useCustomFieldDefs("lead");
   const leadIds = leads.map((l) => l.id);
   const { data: customFieldValues = {} } = useCustomFieldValues("lead", leadIds);
+  const { data: customFieldValuesRaw = {} } = useCustomFieldValuesRaw("lead", leadIds);
+
+  const updateLead = useMutation({
+    mutationFn: async ({ leadId, updates }: { leadId: string; updates: Record<string, unknown> }) => {
+      const { error } = await supabase.from("leads").update(updates).eq("id", leadId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateLeadRelatedQueries(queryClient);
+      toast({ title: "Lead updated" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Lead update failed", description: err.message, variant: "destructive" });
+    },
+  });
 
   const allPageSelected = leads.length > 0 && leads.every((l) => selected.has(l.id));
 
@@ -403,6 +446,31 @@ const LeadsPage = () => {
         </Select>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {leadStatusTabs.map((tab) => {
+          const active = statusFilter === tab.key;
+          const colorClasses = tab.key === "all" ? "bg-muted text-muted-foreground" : leadStatusConfig[tab.key]?.color;
+          return (
+            <Button
+              key={tab.key}
+              type="button"
+              variant={active ? "default" : "outline"}
+              size="sm"
+              className={cn(
+                "h-8 rounded-full px-3 text-xs",
+                !active && colorClasses,
+              )}
+              onClick={() => {
+                setStatusFilter(tab.key);
+                setPage(1);
+              }}
+            >
+              {tab.label}
+            </Button>
+          );
+        })}
+      </div>
+
       {viewMode === "kanban" ? (
         <LeadsKanbanView leads={kanbanData || []} isLoading={kanbanLoading} />
       ) : (
@@ -423,6 +491,7 @@ const LeadsPage = () => {
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Status</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Assigned To</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Source</th>
+              <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Business Type</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Created</th>
               {customFieldDefs.map((def) => (
                 <th key={def.id} className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">{def.label}</th>
@@ -433,20 +502,21 @@ const LeadsPage = () => {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-border/50">
-                  {Array.from({ length: isOwnerOrAdmin ? 8 : 7 }).map((_, j) => (
+                  {Array.from({ length: isOwnerOrAdmin ? 9 : 8 }).map((_, j) => (
                     <td key={j} className="px-4 py-3"><div className="h-4 w-24 animate-pulse rounded bg-muted" /></td>
                   ))}
                 </tr>
               ))
             ) : leads.length === 0 ? (
               <tr>
-                <td colSpan={isOwnerOrAdmin ? 8 : 7} className="px-4 py-12 text-center text-muted-foreground">No leads found</td>
+                <td colSpan={isOwnerOrAdmin ? 9 : 8} className="px-4 py-12 text-center text-muted-foreground">No leads found</td>
               </tr>
             ) : (
               leads.map((lead) => {
                 const statusConf = leadStatusConfig[lead.status] || leadStatusConfig.new_lead;
                 const assignedName = (lead as any).profiles?.name || "Unassigned";
                 const isSelected = selected.has(lead.id);
+                const canManageLead = isOwnerOrAdmin || lead.assigned_to === profile?.id;
                 return (
                   <tr
                     key={lead.id}
@@ -461,12 +531,30 @@ const LeadsPage = () => {
                         <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(lead.id)} aria-label={`Select ${lead.name}`} />
                       </td>
                     )}
-                    <td className="px-4 py-3 font-medium text-foreground">{lead.name}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        className="text-left font-medium text-foreground hover:text-primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/leads/${lead.id}`);
+                        }}
+                      >
+                        {lead.name}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.email}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.company_name || "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{lead.phone}</td>
+                    <td className="px-4 py-3 text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                      <InlineEditableCell
+                        value={lead.phone}
+                        type="phone"
+                        editable={canManageLead}
+                        onSave={(value) => updateLead.mutateAsync({ leadId: lead.id, updates: { phone: value } })}
+                      />
+                    </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      {isOwnerOrAdmin ? (
+                      {canManageLead ? (
                         <Select
                           value={lead.status}
                           onValueChange={(v) => {

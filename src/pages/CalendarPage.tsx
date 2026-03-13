@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
@@ -38,6 +38,8 @@ import { priorityConfig, type CalendarTask } from "@/components/calendar/calenda
 import MonthView from "@/components/calendar/MonthView";
 import WeekView from "@/components/calendar/WeekView";
 import DayView from "@/components/calendar/DayView";
+import { getAssignmentVisibilityMode } from "@/lib/assignment-visibility";
+import { runPaymentAutomationSweep } from "@/lib/payment-automation";
 
 type ViewMode = "month" | "week" | "day";
 
@@ -50,6 +52,11 @@ const CalendarPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const canCreate = profile?.role === "owner" || profile?.role === "admin";
+  const visibilityMode = getAssignmentVisibilityMode(profile);
+
+  useEffect(() => {
+    runPaymentAutomationSweep().catch(() => undefined);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -77,12 +84,20 @@ const CalendarPage = () => {
   const { data: tasks = [] } = useQuery({
     queryKey: ["calendar-tasks", viewMode, format(queryRange.start, "yyyy-MM-dd")],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from("tasks")
-        .select("*, clients!tasks_client_id_fkey(client_name), profiles!tasks_assigned_to_fkey(name)")
+        .select("*, clients!tasks_client_id_fkey(client_name, company_name), profiles!tasks_assigned_to_fkey(name)")
         .gte("deadline", queryRange.start.toISOString())
         .lte("deadline", queryRange.end.toISOString())
         .order("deadline");
+
+      if (visibilityMode === "own_only" && profile?.id) {
+        query = query.eq("assigned_to", profile.id);
+      } else if (visibilityMode === "own_or_unassigned" && profile?.id) {
+        query = query.or(`assigned_to.eq.${profile.id},assigned_to.is.null`);
+      }
+
+      const { data } = await query;
       return (data || []) as CalendarTask[];
     },
   });

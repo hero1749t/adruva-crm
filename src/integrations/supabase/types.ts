@@ -150,6 +150,7 @@ export type Database = {
         Row: {
           assigned_manager: string | null
           billing_status: Database["public"]["Enums"]["billing_status"] | null
+          business_type: string | null
           client_name: string
           company_name: string | null
           contract_end_date: string | null
@@ -160,6 +161,7 @@ export type Database = {
           monthly_payment: number | null
           phone: string | null
           plan: string | null
+          source: string | null
           services: string[] | null
           start_date: string | null
           status: Database["public"]["Enums"]["client_status"] | null
@@ -168,6 +170,7 @@ export type Database = {
         Insert: {
           assigned_manager?: string | null
           billing_status?: Database["public"]["Enums"]["billing_status"] | null
+          business_type?: string | null
           client_name: string
           company_name?: string | null
           contract_end_date?: string | null
@@ -178,6 +181,7 @@ export type Database = {
           monthly_payment?: number | null
           phone?: string | null
           plan?: string | null
+          source?: string | null
           services?: string[] | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["client_status"] | null
@@ -186,6 +190,7 @@ export type Database = {
         Update: {
           assigned_manager?: string | null
           billing_status?: Database["public"]["Enums"]["billing_status"] | null
+          business_type?: string | null
           client_name?: string
           company_name?: string | null
           contract_end_date?: string | null
@@ -196,6 +201,7 @@ export type Database = {
           monthly_payment?: number | null
           phone?: string | null
           plan?: string | null
+          source?: string | null
           services?: string[] | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["client_status"] | null
@@ -261,6 +267,58 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_service_template_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          assignment_name: string | null
+          client_id: string
+          id: string
+          is_active: boolean
+          service_template_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          assignment_name?: string | null
+          client_id: string
+          id?: string
+          is_active?: boolean
+          service_template_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          assignment_name?: string | null
+          client_id?: string
+          id?: string
+          is_active?: boolean
+          service_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_service_template_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_service_template_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_service_template_assignments_service_template_id_fkey"
+            columns: ["service_template_id"]
+            isOneToOne: false
+            referencedRelation: "service_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -436,8 +494,12 @@ export type Database = {
           due_date: string
           id: string
           invoice_number: string
+          installment_type: string
+          last_payment_date: string | null
+          next_payment_date: string | null
           notes: string | null
           paid_date: string | null
+          payment_status: string
           status: Database["public"]["Enums"]["invoice_status"]
           tax_amount: number
           total_amount: number
@@ -453,8 +515,12 @@ export type Database = {
           due_date: string
           id?: string
           invoice_number: string
+          installment_type?: string
+          last_payment_date?: string | null
+          next_payment_date?: string | null
           notes?: string | null
           paid_date?: string | null
+          payment_status?: string
           status?: Database["public"]["Enums"]["invoice_status"]
           tax_amount?: number
           total_amount?: number
@@ -470,8 +536,12 @@ export type Database = {
           due_date?: string
           id?: string
           invoice_number?: string
+          installment_type?: string
+          last_payment_date?: string | null
+          next_payment_date?: string | null
           notes?: string | null
           paid_date?: string | null
+          payment_status?: string
           status?: Database["public"]["Enums"]["invoice_status"]
           tax_amount?: number
           total_amount?: number
@@ -543,7 +613,7 @@ export type Database = {
         Row: {
           assigned_to: string | null
           budget: Database["public"]["Enums"]["lead_budget"] | null
-          business_type: Database["public"]["Enums"]["business_type"] | null
+          business_type: string | null
           company_name: string | null
           created_at: string | null
           email: string
@@ -554,14 +624,14 @@ export type Database = {
           phone: string
           search_vector: unknown
           service_interest: string[] | null
-          source: Database["public"]["Enums"]["lead_source"] | null
+          source: string | null
           status: Database["public"]["Enums"]["lead_status"]
           updated_at: string | null
         }
         Insert: {
           assigned_to?: string | null
           budget?: Database["public"]["Enums"]["lead_budget"] | null
-          business_type?: Database["public"]["Enums"]["business_type"] | null
+          business_type?: string | null
           company_name?: string | null
           created_at?: string | null
           email: string
@@ -572,14 +642,14 @@ export type Database = {
           phone: string
           search_vector?: unknown
           service_interest?: string[] | null
-          source?: Database["public"]["Enums"]["lead_source"] | null
+          source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string | null
         }
         Update: {
           assigned_to?: string | null
           budget?: Database["public"]["Enums"]["lead_budget"] | null
-          business_type?: Database["public"]["Enums"]["business_type"] | null
+          business_type?: string | null
           company_name?: string | null
           created_at?: string | null
           email?: string
@@ -590,7 +660,7 @@ export type Database = {
           phone?: string
           search_vector?: unknown
           service_interest?: string[] | null
-          source?: Database["public"]["Enums"]["lead_source"] | null
+          source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string | null
         }
@@ -767,6 +837,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          can_view_unassigned: boolean | null
           created_at: string | null
           custom_role_id: string | null
           id: string
@@ -778,6 +849,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          can_view_unassigned?: boolean | null
           created_at?: string | null
           custom_role_id?: string | null
           id: string
@@ -789,6 +861,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          can_view_unassigned?: boolean | null
           created_at?: string | null
           custom_role_id?: string | null
           id?: string
@@ -957,6 +1030,7 @@ export type Database = {
       tasks: {
         Row: {
           assigned_to: string | null
+          business_name: string | null
           client_id: string
           completed_at: string | null
           created_at: string | null
@@ -965,7 +1039,10 @@ export type Database = {
           id: string
           meta_link: string | null
           notes: string | null
+          paused_reason: string | null
           priority: Database["public"]["Enums"]["task_priority"] | null
+          service_template_id: string | null
+          service_template_name: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["task_status"] | null
           task_title: string
@@ -974,6 +1051,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          business_name?: string | null
           client_id: string
           completed_at?: string | null
           created_at?: string | null
@@ -982,7 +1060,10 @@ export type Database = {
           id?: string
           meta_link?: string | null
           notes?: string | null
+          paused_reason?: string | null
           priority?: Database["public"]["Enums"]["task_priority"] | null
+          service_template_id?: string | null
+          service_template_name?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["task_status"] | null
           task_title: string
@@ -991,6 +1072,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          business_name?: string | null
           client_id?: string
           completed_at?: string | null
           created_at?: string | null
@@ -999,7 +1081,10 @@ export type Database = {
           id?: string
           meta_link?: string | null
           notes?: string | null
+          paused_reason?: string | null
           priority?: Database["public"]["Enums"]["task_priority"] | null
+          service_template_id?: string | null
+          service_template_name?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["task_status"] | null
           task_title?: string
@@ -1051,7 +1136,7 @@ export type Database = {
         | "local_shop"
         | "corporate"
         | "other"
-      client_status: "active" | "paused" | "completed"
+      client_status: "new" | "active" | "paused" | "completed"
       invoice_status: "draft" | "sent" | "paid" | "overdue" | "cancelled"
       lead_budget: "5k_10k" | "10k_25k" | "25k_50k" | "50k_1l" | "1l_plus"
       lead_source:
@@ -1071,7 +1156,7 @@ export type Database = {
         | "lead_won"
         | "lead_lost"
       task_priority: "urgent" | "high" | "medium" | "low"
-      task_status: "pending" | "in_progress" | "completed" | "overdue"
+      task_status: "pending" | "in_progress" | "completed" | "overdue" | "paused"
       user_role: "owner" | "admin" | "team" | "task_manager"
       user_status: "active" | "inactive"
     }
@@ -1214,7 +1299,7 @@ export const Constants = {
         "corporate",
         "other",
       ],
-      client_status: ["active", "paused", "completed"],
+      client_status: ["new", "active", "paused", "completed"],
       invoice_status: ["draft", "sent", "paid", "overdue", "cancelled"],
       lead_budget: ["5k_10k", "10k_25k", "25k_50k", "50k_1l", "1l_plus"],
       lead_source: [
@@ -1236,7 +1321,7 @@ export const Constants = {
         "lead_lost",
       ],
       task_priority: ["urgent", "high", "medium", "low"],
-      task_status: ["pending", "in_progress", "completed", "overdue"],
+      task_status: ["pending", "in_progress", "completed", "overdue", "paused"],
       user_role: ["owner", "admin", "team", "task_manager"],
       user_status: ["active", "inactive"],
     },

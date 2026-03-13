@@ -144,6 +144,39 @@ export const notifyLeadWonInApp = async ({
   await insertNotifications(notifications);
 };
 
+export const notifyPaymentDueInApp = async ({
+  clientId,
+  clientName,
+  invoiceNumber,
+  assignedManagerId,
+}: {
+  clientId: string;
+  clientName: string;
+  invoiceNumber: string;
+  assignedManagerId?: string | null;
+}) => {
+  const recipients = await getNotificationRecipientsByRoles(["owner", "admin"]);
+  const notifications = recipients.map((recipient) => ({
+    user_id: recipient.id,
+    type: "system" as const,
+    title: "Payment due",
+    message: `${clientName} (${invoiceNumber}) has reached its next payment date.`,
+    task_id: clientId,
+  }));
+
+  if (assignedManagerId) {
+    notifications.push({
+      user_id: assignedManagerId,
+      type: "system" as const,
+      title: "Client payment due",
+      message: `${clientName} (${invoiceNumber}) is due for payment today.`,
+      task_id: clientId,
+    });
+  }
+
+  await insertNotifications(notifications);
+};
+
 export const seedNotificationInbox = async (profiles: TeamProfile[]) => {
   await insertNotifications(
     profiles.map((profile) => ({

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/hooks/useActivityLog";
+import { applyServiceTemplateToClient } from "@/lib/service-template-assignments";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -56,35 +57,29 @@ export function ApplyServiceTemplateDialog({ clientId, clientName, assignedManag
 
   const applyTemplate = useMutation({
     mutationFn: async () => {
-      if (!steps.length) throw new Error("No steps in this template");
-
-      const now = new Date();
-      const tasks = steps.map((step) => ({
-        client_id: clientId,
-        task_title: step.title,
-        priority: (step.priority || "medium") as "urgent" | "high" | "medium" | "low",
-        deadline: new Date(now.getTime() + (step.deadline_offset_days || 7) * 86400000).toISOString(),
-        assigned_to: assignedManager || profile?.id || null,
-        status: "pending" as const,
-        notes: step.description || null,
-      }));
-
-      const { error } = await supabase.from("tasks").insert(tasks);
-      if (error) throw error;
-
       const templateName = templates.find((t) => t.id === selectedTemplateId)?.name;
+      const result = await applyServiceTemplateToClient({
+        clientId,
+        templateId: selectedTemplateId,
+        assignedManager: assignedManager || profile?.id || null,
+        appliedBy: profile?.id || null,
+        businessName: clientName,
+      });
       await logActivity({
         entity: "client",
         entityId: clientId,
         action: "template_applied",
-        metadata: { template: templateName, tasksCreated: tasks.length },
+        metadata: { template: templateName, tasksCreated: result.tasksCreated },
       });
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["client-tasks", clientId] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["client-template-assignments", clientId] });
       const templateName = templates.find((t) => t.id === selectedTemplateId)?.name;
-      toast({ title: `"${templateName}" applied`, description: `${steps.length} tasks created for ${clientName}` });
+      toast({ title: `"${templateName}" applied`, description: `${result.tasksCreated} tasks created for ${clientName}` });
       setOpen(false);
       setSelectedTemplateId("");
     },

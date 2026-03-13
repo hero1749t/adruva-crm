@@ -18,12 +18,14 @@ export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export interface CalendarTask {
   id: string;
+  business_name?: string | null;
   task_title: string;
   deadline: string;
   priority: string | null;
+  service_template_name?: string | null;
   status: string | null;
   client_id: string;
   assigned_to: string | null;
-  clients?: { client_name: string } | null;
+  clients?: { client_name: string; company_name?: string | null } | null;
   profiles?: { name: string } | null;
 }

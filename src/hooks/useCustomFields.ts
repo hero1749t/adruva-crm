@@ -13,6 +13,15 @@ export interface CustomFieldDef {
   sort_order: number;
 }
 
+export function formatCustomFieldValue(raw: unknown): string {
+  if (raw == null || raw === "") return "";
+  if (Array.isArray(raw)) return raw.join(", ");
+  if (typeof raw === "object") {
+    return (raw as any).value ?? (raw as any).label ?? JSON.stringify(raw);
+  }
+  return String(raw).replace(/^"|"$/g, "");
+}
+
 export function useCustomFieldDefs(entityType: "lead" | "client") {
   return useQuery({
     queryKey: ["custom-field-defs", entityType],
@@ -36,9 +45,9 @@ export function useCustomFieldDefs(entityType: "lead" | "client") {
   });
 }
 
-export function useCustomFieldValues(entityType: "lead" | "client", entityIds: string[]) {
+export function useCustomFieldValuesRaw(entityType: "lead" | "client", entityIds: string[]) {
   return useQuery({
-    queryKey: ["custom-field-values-bulk", entityType, entityIds],
+    queryKey: ["custom-field-values-bulk-raw", entityType, entityIds],
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
     queryFn: async () => {
@@ -56,20 +65,29 @@ export function useCustomFieldValues(entityType: "lead" | "client", entityIds: s
       }
 
       // Map: entityId -> { defId -> value }
-      const map: Record<string, Record<string, string>> = {};
+      const map: Record<string, Record<string, unknown>> = {};
       for (const row of data || []) {
         if (!map[row.entity_id]) map[row.entity_id] = {};
-        const raw = row.value;
-        if (raw == null) {
-          map[row.entity_id][row.field_definition_id] = "";
-        } else if (typeof raw === "object" && !Array.isArray(raw)) {
-          map[row.entity_id][row.field_definition_id] = (raw as any).value ?? (raw as any).label ?? JSON.stringify(raw);
-        } else {
-          map[row.entity_id][row.field_definition_id] = String(raw).replace(/^"|"$/g, "");
-        }
+        map[row.entity_id][row.field_definition_id] = row.value;
       }
       return map;
     },
     enabled: entityIds.length > 0,
   });
+}
+
+export function useCustomFieldValues(entityType: "lead" | "client", entityIds: string[]) {
+  const query = useCustomFieldValuesRaw(entityType, entityIds);
+
+  return {
+    ...query,
+    data: Object.fromEntries(
+      Object.entries(query.data || {}).map(([entityId, fields]) => [
+        entityId,
+        Object.fromEntries(
+          Object.entries(fields).map(([defId, rawValue]) => [defId, formatCustomFieldValue(rawValue)])
+        ),
+      ])
+    ) as Record<string, Record<string, string>>,
+  };
 }

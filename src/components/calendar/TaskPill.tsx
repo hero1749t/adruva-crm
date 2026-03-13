@@ -58,9 +58,9 @@ const TaskPill = ({ task, expanded, canDrag }: TaskPillProps) => {
             )}
           />
           <span className="truncate">{task.task_title}</span>
-          {expanded && task.clients?.client_name && (
+          {expanded && (task.business_name || task.clients?.company_name || task.clients?.client_name) && (
             <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-              {task.clients.client_name}
+              {task.business_name || task.clients?.company_name || task.clients?.client_name}
             </span>
           )}
         </button>
@@ -76,8 +76,11 @@ const TaskPill = ({ task, expanded, canDrag }: TaskPillProps) => {
             <span className="text-muted-foreground">·</span>
             <span className="capitalize">{prio.label}</span>
           </div>
-          {task.clients?.client_name && (
-            <p className="text-muted-foreground">{task.clients.client_name}</p>
+          {(task.business_name || task.clients?.company_name || task.clients?.client_name) && (
+            <p className="text-muted-foreground">{task.business_name || task.clients?.company_name || task.clients?.client_name}</p>
+          )}
+          {task.service_template_name && (
+            <p className="text-muted-foreground">Template: {task.service_template_name}</p>
           )}
           {task.profiles?.name && (
             <p className="text-muted-foreground">→ {task.profiles.name}</p>

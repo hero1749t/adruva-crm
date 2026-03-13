@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { logActivity } from "@/hooks/useActivityLog";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,12 +28,16 @@ import { CommunicationLog } from "@/components/CommunicationLog";
 import { ClientAIInsights } from "@/components/ClientAIInsights";
 import { ApplyServiceTemplateDialog } from "@/components/ApplyServiceTemplateDialog";
 import { CustomFieldsSection } from "@/components/CustomFieldsSection";
+import { PropertyMultiSelect } from "@/components/PropertyMultiSelect";
+import { getPropertyOptionLabels, useEntityPropertyOptions } from "@/lib/property-options";
+import { runPaymentAutomationSweep } from "@/lib/payment-automation";
 
 type ClientStatus = Database["public"]["Enums"]["client_status"];
 type BillingStatus = Database["public"]["Enums"]["billing_status"];
 type TaskStatus = Database["public"]["Enums"]["task_status"];
 
 const statusConfig: Record<ClientStatus, { label: string; color: string }> = {
+  new: { label: "New", color: "bg-primary/15 text-primary" },
   active: { label: "Active", color: "bg-success/20 text-success" },
   paused: { label: "Paused", color: "bg-warning/20 text-warning" },
   completed: { label: "Completed", color: "bg-muted text-muted-foreground" },
@@ -50,6 +54,7 @@ const taskStatusConfig: Record<string, { label: string; color: string }> = {
   in_progress: { label: "In Progress", color: "bg-primary/20 text-primary" },
   completed: { label: "Completed", color: "bg-success/20 text-success" },
   overdue: { label: "Overdue", color: "bg-destructive/20 text-destructive" },
+  paused: { label: "Paused", color: "bg-warning/20 text-warning" },
 };
 
 const priorityConfig: Record<string, { label: string; color: string }> = {
@@ -70,10 +75,15 @@ const ClientDetailPage = () => {
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
   const isOwner = profile?.role === "owner";
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const { sourceOptions, businessTypeOptions, serviceInterestOptions } = useEntityPropertyOptions("client");
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const { healthScore } = useClientHealthScore(id || "");
+
+  useEffect(() => {
+    runPaymentAutomationSweep().catch(() => undefined);
+  }, []);
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["client", id],
@@ -110,6 +120,21 @@ const ClientDetailPage = () => {
         .select("*")
         .eq("client_id", id!)
         .order("due_date", { ascending: false });
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: templateAssignments = [] } = useQuery({
+    queryKey: ["client-template-assignments", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_service_template_assignments")
+        .select("*, service_templates!client_service_template_assignments_service_template_id_fkey(name, category)")
+        .eq("client_id", id!)
+        .eq("is_active", true)
+        .order("assigned_at", { ascending: false });
+      if (error) throw error;
       return data || [];
     },
     enabled: !!id,
@@ -153,6 +178,38 @@ const ClientDetailPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+
+  const updateInvoice = useMutation({
+    mutationFn: async ({ invoiceId, updates }: { invoiceId: string; updates: Record<string, unknown> }) => {
+      const { error } = await supabase.from("invoices").update(updates).eq("id", invoiceId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-dashboard"] });
+      toast({ title: "Invoice updated" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Invoice update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const deleteInvoice = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const { error } = await supabase.from("invoices").delete().eq("id", invoiceId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast({ title: "Invoice deleted" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -223,8 +280,11 @@ const ClientDetailPage = () => {
   }
 
   const managerProfile = (client as any).profiles;
-  const sConf = statusConfig[client.status || "active"];
+  const sConf = statusConfig[client.status || "new"];
   const bConf = billingConfig[client.billing_status || "due"];
+  const isAssignedManager = client.assigned_manager === profile?.id;
+  const canManageClient = isOwnerOrAdmin || isAssignedManager;
+  const canManageClientTasks = canManageClient || tasks.some((task) => task.assigned_to === profile?.id);
 
   const InfoRow = ({
     icon: Icon, label, field, value, editable = true,
@@ -257,7 +317,7 @@ const ClientDetailPage = () => {
         ) : (
           <div className="flex items-center gap-1.5">
             <p className="text-sm text-foreground">{value || "—"}</p>
-            {editable && isOwnerOrAdmin && (
+            {editable && canManageClient && (
               <button onClick={() => startEdit(field, value || "")} className="opacity-0 transition-opacity group-hover:opacity-100">
                 <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary" />
               </button>
@@ -348,9 +408,9 @@ const ClientDetailPage = () => {
                   <div>
                     <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Status</p>
                     <Select
-                      value={client.status || "active"}
+                      value={client.status || "new"}
                       onValueChange={(v) => updateClient.mutate({ status: v })}
-                      disabled={!isOwnerOrAdmin}
+                      disabled={!canManageClient}
                     >
                       <SelectTrigger className="h-9 border-border bg-muted/30 text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -380,7 +440,7 @@ const ClientDetailPage = () => {
                     <Select
                       value={client.billing_status || "due"}
                       onValueChange={(v) => updateClient.mutate({ billing_status: v })}
-                      disabled={!isOwnerOrAdmin}
+                      disabled={!canManageClient}
                     >
                       <SelectTrigger className="h-9 border-border bg-muted/30 text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -420,6 +480,67 @@ const ClientDetailPage = () => {
                   <InfoRow icon={IndianRupee} label="Monthly Payment" field="monthly_payment" value={client.monthly_payment?.toString() || null} />
                   <InfoRow icon={Calendar} label="Start Date" field="start_date" value={client.start_date} />
                   <InfoRow icon={Calendar} label="Contract End" field="contract_end_date" value={client.contract_end_date} />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h2 className="mb-3 font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
+                  Business Details
+                </h2>
+                <div className="space-y-3">
+                  <div>
+                    <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Source</p>
+                    <Select
+                      value={client.source || ""}
+                      onValueChange={(value) => updateClient.mutate({ source: value || null })}
+                      disabled={!canManageClient}
+                    >
+                      <SelectTrigger className="h-9 border-border bg-muted/30 text-sm">
+                        <SelectValue placeholder="Select source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sourceOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Business Type</p>
+                    <Select
+                      value={client.business_type || ""}
+                      onValueChange={(value) => updateClient.mutate({ business_type: value || null })}
+                      disabled={!canManageClient}
+                    >
+                      <SelectTrigger className="h-9 border-border bg-muted/30 text-sm">
+                        <SelectValue placeholder="Select business type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {businessTypeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Service Interested</p>
+                    <PropertyMultiSelect
+                      options={serviceInterestOptions}
+                      value={client.services || []}
+                      onChange={(value) => updateClient.mutate({ services: value.length ? value : null })}
+                      placeholder="Select interested services"
+                      disabled={!canManageClient}
+                    />
+                    {!!client.services?.length && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {getPropertyOptionLabels(serviceInterestOptions, client.services).join(", ")}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -485,13 +606,30 @@ const ClientDetailPage = () => {
                 Tasks ({completedTasks}/{totalTasks} completed)
               </h2>
               {isOwnerOrAdmin && (
-                <ApplyServiceTemplateDialog
-                  clientId={id!}
-                  clientName={client.client_name}
-                  assignedManager={client.assigned_manager}
-                />
+                <div className="flex items-center gap-2">
+                  {isOwnerOrAdmin && (
+                    <ApplyServiceTemplateDialog
+                      clientId={id!}
+                      clientName={client.company_name || client.client_name}
+                      assignedManager={client.assigned_manager}
+                    />
+                  )}
+                </div>
               )}
             </div>
+
+            {templateAssignments.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {templateAssignments.map((assignment) => (
+                  <span
+                    key={assignment.id}
+                    className="rounded-full border border-border bg-muted/30 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-foreground"
+                  >
+                    {assignment.assignment_name || (assignment as any).service_templates?.name || "Template"}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {totalTasks > 0 && (
               <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -532,6 +670,14 @@ const ClientDetailPage = () => {
                               {pConf.label}
                             </span>
                             <span className="font-mono text-[9px] text-muted-foreground">{assignee}</span>
+                            {task.business_name && (
+                              <span className="font-mono text-[9px] text-muted-foreground">{task.business_name}</span>
+                            )}
+                            {task.service_template_name && (
+                              <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-primary">
+                                {task.service_template_name}
+                              </span>
+                            )}
                             {task.deadline && (
                               <span className={`font-mono text-[9px] ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
                                 Due {new Date(task.deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
@@ -558,7 +704,7 @@ const ClientDetailPage = () => {
                             </div>
                           )}
                         </div>
-                        {isOwnerOrAdmin && task.status !== "completed" && (
+                        {canManageClientTasks && task.status !== "completed" && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -609,12 +755,14 @@ const ClientDetailPage = () => {
           </div>
 
           <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="grid grid-cols-[1fr_100px_100px_100px_80px] gap-2 border-b border-border bg-surface px-4 py-2.5">
+            <div className={`grid gap-2 border-b border-border bg-surface px-4 py-2.5 ${isOwnerOrAdmin ? "grid-cols-[1fr_110px_110px_110px_120px_120px_90px]" : "grid-cols-[1fr_100px_100px_100px_120px_120px]"}`}>
               <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Invoice</span>
               <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Amount</span>
               <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Due Date</span>
-              <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Status</span>
-              <span />
+              <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Payment</span>
+              <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Last Paid</span>
+              <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Next Due</span>
+              {isOwnerOrAdmin && <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Actions</span>}
             </div>
             {invoices.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">No invoices yet</div>
@@ -628,23 +776,123 @@ const ClientDetailPage = () => {
                   cancelled: "bg-muted text-muted-foreground",
                 };
                 return (
-                  <div key={inv.id} className="grid grid-cols-[1fr_100px_100px_100px_80px] items-center gap-2 border-b border-border/50 px-4 py-2.5">
-                    <span className="text-sm font-medium text-foreground">{inv.invoice_number}</span>
+                  <div key={inv.id} className={`grid items-center gap-2 border-b border-border/50 px-4 py-2.5 ${isOwnerOrAdmin ? "grid-cols-[1fr_110px_110px_110px_120px_120px_90px]" : "grid-cols-[1fr_100px_100px_100px_120px_120px]"}`}>
+                    <div className="space-y-1">
+                      <span className="text-sm font-medium text-foreground">{inv.invoice_number}</span>
+                      {isOwnerOrAdmin ? (
+                        <Select
+                          value={inv.installment_type || "monthly"}
+                          onValueChange={(value) => updateInvoice.mutate({ invoiceId: inv.id, updates: { installment_type: value } })}
+                        >
+                          <SelectTrigger className="h-7 w-[130px] border-border bg-muted/30 text-[11px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="twice_a_month">Twice a month</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {(inv.installment_type || "monthly").replaceAll("_", " ")}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-sm text-foreground">₹{Number(inv.total_amount).toLocaleString()}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(inv.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                    </span>
-                    <span className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider ${statusColors[inv.status] || ""}`}>
-                      {inv.status}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => navigate(`/invoices`)}
-                    >
-                      View
-                    </Button>
+                    {isOwnerOrAdmin ? (
+                      <Input
+                        type="date"
+                        className="h-8"
+                        defaultValue={inv.due_date?.slice(0, 10) || ""}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value && value !== inv.due_date?.slice(0, 10)) {
+                            updateInvoice.mutate({ invoiceId: inv.id, updates: { due_date: value, next_payment_date: value } });
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(inv.due_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                      </span>
+                    )}
+                    {isOwnerOrAdmin ? (
+                      <Select
+                        value={inv.payment_status || "due"}
+                        onValueChange={(value) => updateInvoice.mutate({
+                          invoiceId: inv.id,
+                          updates: {
+                            payment_status: value,
+                            status: value === "paid" ? "paid" : value === "overdue" ? "overdue" : inv.status,
+                            last_payment_date: value === "paid" ? new Date().toISOString().slice(0, 10) : inv.last_payment_date,
+                          },
+                        })}
+                      >
+                        <SelectTrigger className="h-7 border-border bg-muted/30 text-[11px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="due">Due</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="overdue">Overdue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider ${statusColors[(inv.payment_status as string) || inv.status] || ""}`}>
+                        {inv.payment_status || inv.status}
+                      </span>
+                    )}
+                    {isOwnerOrAdmin ? (
+                      <Input
+                        type="date"
+                        className="h-8"
+                        defaultValue={inv.last_payment_date || ""}
+                        onBlur={(e) => {
+                          if (e.target.value !== (inv.last_payment_date || "")) {
+                            updateInvoice.mutate({ invoiceId: inv.id, updates: { last_payment_date: e.target.value || null } });
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{inv.last_payment_date || "—"}</span>
+                    )}
+                    {isOwnerOrAdmin ? (
+                      <Input
+                        type="date"
+                        className="h-8"
+                        defaultValue={inv.next_payment_date || inv.due_date?.slice(0, 10) || ""}
+                        onBlur={(e) => {
+                          const value = e.target.value || null;
+                          if (value !== (inv.next_payment_date || inv.due_date?.slice(0, 10) || "")) {
+                            updateInvoice.mutate({ invoiceId: inv.id, updates: { next_payment_date: value } });
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{inv.next_payment_date || "—"}</span>
+                    )}
+                    {isOwnerOrAdmin && (
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => navigate(`/invoices`)}
+                        >
+                          View
+                        </Button>
+                        {isOwner && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-destructive"
+                            onClick={() => deleteInvoice.mutate(inv.id)}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })
