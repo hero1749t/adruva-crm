@@ -70,13 +70,13 @@ describe('E2E - Complete User Workflows', () => {
       console.log('✅ Step 5: Invoice created');
 
       // Step 6: Send invoice
-      MockDatabase.updateInvoice = (id, updates) => {
-        const inv = MockDatabase.invoices.find(i => i.id === id);
+      (MockDatabase as any).updateInvoice = (id: string, updates: any) => {
+        const inv = MockDatabase.invoices.find((i: any) => i.id === id);
         if (inv) Object.assign(inv, updates);
         return inv;
       };
       
-      const sentInvoice = { ...invoice, status: 'sent', sent_at: new Date().toISOString() };
+      const sentInvoice: any = { ...invoice, status: 'sent', sent_at: new Date().toISOString() };
       console.log('✅ Step 6: Invoice sent');
 
       // Step 7: Receive payment
