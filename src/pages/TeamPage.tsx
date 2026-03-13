@@ -386,7 +386,7 @@ const TeamPage = () => {
       toast({ title: "Team member created" });
       setFormData({ name: "", email: "", password: "", role: "team", customRoleId: "" });
       setDialogOpen(false);
-      logActivity({ entity: "team", entityId: data.userId, action: "member_created", metadata: { member_name: data.name, role: data.role, email: data.email } });
+      logActivity({ entity: "team", entityId: data.userId as string, action: "member_created", metadata: { member_name: data.name, role: data.role, email: data.email } });
     },
     onError: (err: Error) => {
       if (err.message !== "Validation failed") toast({ title: "Failed to create user", description: err.message, variant: "destructive" });
