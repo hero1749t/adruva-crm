@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { invokeSupabaseFunction } from "@/lib/supabase-function-fallback";
 
 export async function sendStatusEmail({
   entity,
@@ -14,12 +14,12 @@ export async function sendStatusEmail({
   assignedTo?: string | null;
 }) {
   try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) return;
-
-    await supabase.functions.invoke("send-status-email", {
-      body: { entity, entityName, oldStatus, newStatus, assignedTo },
+    await invokeSupabaseFunction("send-status-email", {
+      entity,
+      entityName,
+      oldStatus,
+      newStatus,
+      assignedTo,
     });
   } catch (err) {
     console.error("Failed to send status email:", err);

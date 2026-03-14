@@ -13,6 +13,15 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend,
 } from "recharts";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SparklineMetricCard } from "@/components/dashboard/SparklineMetricCard";
 import { DateRangeToggle, type DateRange } from "@/components/dashboard/DateRangeToggle";
 import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
@@ -39,11 +48,27 @@ function getRangeDays(range: DateRange) {
   return range === "7d" ? 7 : range === "30d" ? 30 : 90;
 }
 
+function roleLabel(role: string | null | undefined) {
+  switch (role) {
+    case "owner":
+      return "Owner";
+    case "admin":
+      return "Admin";
+    case "task_manager":
+      return "Task Manager";
+    case "team":
+      return "Team";
+    default:
+      return "Team Member";
+  }
+}
+
 const DashboardPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
   const [dateRange, setDateRange] = useState<DateRange>("30d");
+  const [dashboardScope, setDashboardScope] = useState("all");
 
   // Check if user is admin/owner (can see all data)
   const isManager = profile?.role === "owner" || profile?.role === "admin";
@@ -73,6 +98,20 @@ const DashboardPage = () => {
     },
   });
 
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["dashboard-team-members"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, name, role, status")
+        .eq("status", "active")
+        .order("role")
+        .order("name");
+      return data || [];
+    },
+    enabled: isManager,
+  });
+
   // Realtime subscriptions for auto-refresh + toast notifications
   useEffect(() => {
     const channels = [
@@ -98,18 +137,51 @@ const DashboardPage = () => {
     return () => { channels.forEach((c) => supabase.removeChannel(c)); };
   }, [queryClient]);
 
-  // Filter data based on user role
+  const selectedMember = useMemo(
+    () => teamMembers.find((member) => dashboardScope === `user:${member.id}`),
+    [dashboardScope, teamMembers]
+  );
+
+  const selectedRoleScope = dashboardScope.startsWith("role:") ? dashboardScope.replace("role:", "") : null;
+  const dashboardLabel = !isManager
+    ? profile?.name || "My Dashboard"
+    : dashboardScope === "all"
+      ? "Agency Overview"
+      : selectedRoleScope
+        ? `${roleLabel(selectedRoleScope)} Dashboard`
+        : selectedMember?.name
+          ? `${selectedMember.name}'s Dashboard`
+          : "Dashboard";
+
+  const matchesScope = (assignedId: string | null | undefined, role?: string | null) => {
+    if (!isManager) return assignedId === userId;
+    if (dashboardScope === "all") return true;
+    if (selectedRoleScope) return role === selectedRoleScope;
+    if (selectedMember) return assignedId === selectedMember.id;
+    return true;
+  };
+
+  // Filter data based on user role / selected scope
   const myLeads = useMemo(() => 
-    isManager ? leads : leads.filter((l) => l.assigned_to === userId),
-    [leads, isManager, userId]
+    leads.filter((lead) => {
+      const assignee = teamMembers.find((member) => member.id === lead.assigned_to);
+      return matchesScope(lead.assigned_to, assignee?.role);
+    }),
+    [leads, teamMembers, dashboardScope, isManager, userId, selectedMember, selectedRoleScope]
   );
   const myClients = useMemo(() => 
-    isManager ? clients : clients.filter((c) => c.assigned_manager === userId),
-    [clients, isManager, userId]
+    clients.filter((client) => {
+      const manager = teamMembers.find((member) => member.id === client.assigned_manager);
+      return matchesScope(client.assigned_manager, manager?.role);
+    }),
+    [clients, teamMembers, dashboardScope, isManager, userId, selectedMember, selectedRoleScope]
   );
   const myTasks = useMemo(() => 
-    isManager ? tasks : tasks.filter((t) => t.assigned_to === userId),
-    [tasks, isManager, userId]
+    tasks.filter((task) => {
+      const assignee = teamMembers.find((member) => member.id === task.assigned_to);
+      return matchesScope(task.assigned_to, assignee?.role);
+    }),
+    [tasks, teamMembers, dashboardScope, isManager, userId, selectedMember, selectedRoleScope]
   );
 
   const now = new Date();
@@ -263,10 +335,42 @@ const DashboardPage = () => {
             {isManager ? "Dashboard" : "My Dashboard"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isManager ? "Overview of your agency performance" : `Welcome back, ${profile?.name || "Team Member"}! Here's your work summary`}
+            {isManager
+              ? `${dashboardLabel} metrics and activity`
+              : `Welcome back, ${profile?.name || "Team Member"}! Here's your work summary`}
           </p>
         </div>
-        <DateRangeToggle value={dateRange} onChange={setDateRange} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {isManager && (
+            <Select value={dashboardScope} onValueChange={setDashboardScope}>
+              <SelectTrigger className="w-full min-w-[220px] border-border bg-muted/30 text-sm sm:w-[280px]">
+                <SelectValue placeholder="Select dashboard view" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Overview</SelectLabel>
+                  <SelectItem value="all">Agency Overview</SelectItem>
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Role Views</SelectLabel>
+                  <SelectItem value="role:owner">Owners</SelectItem>
+                  <SelectItem value="role:admin">Admins</SelectItem>
+                  <SelectItem value="role:team">Team Members</SelectItem>
+                  <SelectItem value="role:task_manager">Task Managers</SelectItem>
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Member Views</SelectLabel>
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.id} value={`user:${member.id}`}>
+                      {member.name} ({roleLabel(member.role)})
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+          <DateRangeToggle value={dateRange} onChange={setDateRange} />
+        </div>
       </div>
 
       {!isManager && (

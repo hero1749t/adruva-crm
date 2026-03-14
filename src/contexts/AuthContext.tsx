@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
-type UserRole = "owner" | "admin" | "team";
+type UserRole = "owner" | "admin" | "team" | "task_manager";
 
 interface Profile {
   id: string;
@@ -11,6 +11,7 @@ interface Profile {
   status: string;
   email?: string;
   custom_role_id?: string;
+  can_view_unassigned?: boolean;
 }
 
 interface AuthContextType {

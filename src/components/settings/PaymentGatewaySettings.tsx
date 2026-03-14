@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  CreditCard, IndianRupee, Shield, CheckCircle2, QrCode, Copy, Check,
+  CreditCard, IndianRupee, Shield, CheckCircle2, QrCode, Copy, Check, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Gateway {
   id: string;
@@ -59,24 +61,92 @@ const GATEWAYS: Gateway[] = [
 export function PaymentGatewaySettings() {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const isOwner = profile?.role === "owner";
-  const [enabledGateways, setEnabledGateways] = useState<Set<string>>(new Set());
   const [upiId, setUpiId] = useState("");
-  const [savedUpiId, setSavedUpiId] = useState("");
   const [upiDialogOpen, setUpiDialogOpen] = useState(false);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [selectedGatewayId, setSelectedGatewayId] = useState<string | null>(null);
+  const [apiKeyDraft, setApiKeyDraft] = useState("");
   const [copied, setCopied] = useState(false);
+
+  const { data: integrations = [] } = useQuery({
+    queryKey: ["payment-gateway-integrations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("integrations")
+        .select("*")
+        .in("provider", ["stripe", "razorpay", "upi"])
+        .order("created_at");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const integrationByProvider = useMemo(
+    () => Object.fromEntries(integrations.map((integration: any) => [integration.provider, integration])),
+    [integrations]
+  );
+
+  const enabledGateways = useMemo(
+    () => new Set(integrations.filter((integration: any) => integration.is_active).map((integration: any) => integration.provider)),
+    [integrations]
+  );
+
+  const savedUpiId = String((integrationByProvider.upi?.config as Record<string, unknown> | undefined)?.upi_id || "");
+
+  const saveGateway = useMutation({
+    mutationFn: async ({
+      provider,
+      apiKey,
+      isActive,
+      config,
+    }: {
+      provider: string;
+      apiKey?: string;
+      isActive: boolean;
+      config?: Record<string, unknown>;
+    }) => {
+      const existing = integrationByProvider[provider];
+      const payload = {
+        name: existing?.name || GATEWAYS.find((gateway) => gateway.id === provider)?.name || provider,
+        provider,
+        api_key_encrypted: apiKey ?? existing?.api_key_encrypted ?? "",
+        is_active: isActive,
+        config: config ?? existing?.config ?? {},
+      };
+
+      if (existing?.id) {
+        const { error } = await supabase.from("integrations").update(payload).eq("id", existing.id);
+        if (error) throw error;
+        return;
+      }
+
+      const { error } = await supabase.from("integrations").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment-gateway-integrations"] });
+      queryClient.invalidateQueries({ queryKey: ["integrations"] });
+    },
+  });
 
   const toggleGateway = (id: string) => {
     if (id === "upi" && !enabledGateways.has(id)) {
       setUpiDialogOpen(true);
       return;
     }
-    setEnabledGateways((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    saveGateway.mutate(
+      { provider: id, isActive: !enabledGateways.has(id) },
+      {
+        onSuccess: () => {
+          toast({ title: !enabledGateways.has(id) ? "Gateway enabled" : "Gateway disabled" });
+        },
+        onError: (error: Error) => {
+          toast({ title: "Failed to update gateway", description: error.message, variant: "destructive" });
+        },
+      }
+    );
   };
 
   const handleSaveUpi = () => {
@@ -84,10 +154,18 @@ export function PaymentGatewaySettings() {
       toast({ title: "Invalid UPI ID", description: "Enter a valid UPI ID like yourname@upi", variant: "destructive" });
       return;
     }
-    setSavedUpiId(upiId.trim());
-    setEnabledGateways((prev) => new Set([...prev, "upi"]));
-    setUpiDialogOpen(false);
-    toast({ title: "UPI Enabled", description: `Payments can now be received at ${upiId.trim()}` });
+    saveGateway.mutate(
+      { provider: "upi", isActive: true, config: { upi_id: upiId.trim() } },
+      {
+        onSuccess: () => {
+          setUpiDialogOpen(false);
+          toast({ title: "UPI Enabled", description: `Payments can now be received at ${upiId.trim()}` });
+        },
+        onError: (error: Error) => {
+          toast({ title: "Failed to save UPI", description: error.message, variant: "destructive" });
+        },
+      }
+    );
   };
 
   const copyUpiId = () => {
@@ -98,6 +176,12 @@ export function PaymentGatewaySettings() {
 
   const generateQrUrl = (vpa: string) => {
     return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=${encodeURIComponent(vpa)}&pn=ADRUVA%20CRM`;
+  };
+
+  const openConfigDialog = (gatewayId: string) => {
+    setSelectedGatewayId(gatewayId);
+    setApiKeyDraft(integrationByProvider[gatewayId]?.api_key_encrypted || "");
+    setConfigDialogOpen(true);
   };
 
   if (!isOwner) {
@@ -254,7 +338,7 @@ export function PaymentGatewaySettings() {
                         onCheckedChange={() => toggleGateway(gw.id)}
                       />
                       {isEnabled && (
-                        <Button variant="outline" size="sm" className="text-xs gap-1.5">
+                        <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => openConfigDialog(gw.id)}>
                           Configure
                         </Button>
                       )}
@@ -302,6 +386,53 @@ export function PaymentGatewaySettings() {
                 Enable UPI
               </Button>
               <Button variant="outline" onClick={() => setUpiDialogOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configure {GATEWAYS.find((gateway) => gateway.id === selectedGatewayId)?.name || "Gateway"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="mb-1 block font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                API Key / Secret
+              </label>
+              <Input
+                value={apiKeyDraft}
+                onChange={(e) => setApiKeyDraft(e.target.value)}
+                placeholder="Paste gateway key or secret"
+                className="border-border bg-muted/30 font-mono"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button
+                className="flex-1"
+                disabled={!selectedGatewayId || saveGateway.isPending}
+                onClick={() => {
+                  if (!selectedGatewayId) return;
+                  saveGateway.mutate(
+                    { provider: selectedGatewayId, apiKey: apiKeyDraft.trim(), isActive: true },
+                    {
+                      onSuccess: () => {
+                        setConfigDialogOpen(false);
+                        toast({ title: "Gateway configuration saved" });
+                      },
+                      onError: (error: Error) => {
+                        toast({ title: "Failed to save configuration", description: error.message, variant: "destructive" });
+                      },
+                    }
+                  );
+                }}
+              >
+                {saveGateway.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Configuration"}
+              </Button>
+              <Button variant="outline" onClick={() => setConfigDialogOpen(false)}>
                 Cancel
               </Button>
             </div>

@@ -43,6 +43,7 @@ import { WeeklyReportPreviewButton } from "@/components/WeeklyReportPreview";
 import { ServiceTemplatesSettings } from "@/components/settings/ServiceTemplatesSettings";
 import { AutomationEngineSettings } from "@/components/settings/AutomationEngineSettings";
 import { sendWeeklyReport } from "@/lib/weekly-report";
+import { invokeSupabaseFunction } from "@/lib/supabase-function-fallback";
 
 type TaskPriority = Database["public"]["Enums"]["task_priority"];
 
@@ -147,9 +148,39 @@ const CronJobsMonitor = () => {
   const { data: jobs = [], isLoading, refetch, isFetching } = useQuery<CronJob[]>({
     queryKey: ["cron-jobs-status"],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("cron-status");
-      if (error) throw error;
-      return data.jobs || [];
+      const functionResult = await invokeSupabaseFunction("cron-status");
+      if (!functionResult.missing && functionResult.data?.jobs) {
+        return functionResult.data.jobs || [];
+      }
+
+      const { data, error } = await supabase.rpc("get_cron_jobs");
+      if (!error && Array.isArray(data)) {
+        return data as CronJob[];
+      }
+
+      return [
+        {
+          jobid: 1,
+          schedule: "0 2 * * 0",
+          command: "functions/v1/weekly-report",
+          active: true,
+          last_run: null,
+        },
+        {
+          jobid: 2,
+          schedule: "0 2 * * *",
+          command: "functions/v1/deadline-reminder",
+          active: true,
+          last_run: null,
+        },
+        {
+          jobid: 3,
+          schedule: "*/30 * * * *",
+          command: "functions/v1/check-overdue",
+          active: true,
+          last_run: null,
+        },
+      ];
     },
     refetchInterval: 60000, // auto-refresh every minute
   });

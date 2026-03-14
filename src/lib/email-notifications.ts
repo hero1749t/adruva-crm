@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { invokeSupabaseFunction } from "@/lib/supabase-function-fallback";
 
 export async function notifyLeadAssigned({
   leadName,
@@ -10,8 +10,10 @@ export async function notifyLeadAssigned({
   assignedToName?: string;
 }) {
   try {
-    await supabase.functions.invoke("notify-lead-assigned", {
-      body: { leadName, assignedToId, assignedToName },
+    await invokeSupabaseFunction("notify-lead-assigned", {
+      leadName,
+      assignedToId,
+      assignedToName,
     });
   } catch (err) {
     console.error("Failed to send lead assigned email:", err);
@@ -30,8 +32,11 @@ export async function notifyClientCreated({
   plan?: string | null;
 }) {
   try {
-    await supabase.functions.invoke("notify-client-created", {
-      body: { clientName, companyName, assignedManager, plan },
+    await invokeSupabaseFunction("notify-client-created", {
+      clientName,
+      companyName,
+      assignedManager,
+      plan,
     });
   } catch (err) {
     console.error("Failed to send client created email:", err);
@@ -52,8 +57,12 @@ export async function notifyTaskAssigned({
   deadline?: string;
 }) {
   try {
-    await supabase.functions.invoke("notify-task-assigned", {
-      body: { taskTitle, assignedToId, assignedToName, clientName, deadline },
+    await invokeSupabaseFunction("notify-task-assigned", {
+      taskTitle,
+      assignedToId,
+      assignedToName,
+      clientName,
+      deadline,
     });
   } catch (err) {
     console.error("Failed to send task assigned email:", err);

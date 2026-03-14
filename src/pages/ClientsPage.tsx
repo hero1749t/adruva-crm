@@ -14,6 +14,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { useClientHealthScores } from "@/hooks/useClientHealthScore";
 import HealthScoreBadge from "@/components/HealthScoreBadge";
 import { useCustomFieldDefs, useCustomFieldValues } from "@/hooks/useCustomFields";
+import { getAssignmentVisibilityMode } from "@/lib/assignment-visibility";
 
 const clientStatusConfig: Record<string, { label: string; color: string }> = {
   active: { label: "Active", color: "bg-success/20 text-success" },
@@ -33,6 +34,7 @@ const ClientsPage = () => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
+  const visibilityMode = getAssignmentVisibilityMode(profile);
 
   // Fetch team members for assigned filter
   const { data: teamMembers = [] } = useQuery({
@@ -41,7 +43,7 @@ const ClientsPage = () => {
       const { data } = await supabase.from("profiles").select("id, name").eq("status", "active").order("name");
       return data || [];
     },
-    enabled: isOwnerOrAdmin,
+    enabled: profile?.role === "owner",
   });
 
   const { data, isLoading } = useQuery({
@@ -56,11 +58,17 @@ const ClientsPage = () => {
         .order("created_at", { ascending: false })
         .range(from, to);
 
+      if (visibilityMode === "own_only" && profile?.id) {
+        query = query.eq("assigned_manager", profile.id);
+      } else if (visibilityMode === "own_or_unassigned" && profile?.id) {
+        query = query.or(`assigned_manager.eq.${profile.id},assigned_manager.is.null`);
+      }
+
       if (debouncedSearch) {
         query = query.or(`client_name.ilike.%${debouncedSearch}%,company_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`);
       }
 
-      if (assignedFilter !== "all") {
+      if (visibilityMode === "all" && assignedFilter !== "all") {
         if (assignedFilter === "unassigned") {
           query = query.is("assigned_manager", null);
         } else {
@@ -102,10 +110,10 @@ const ClientsPage = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            {isOwnerOrAdmin ? "Clients" : "My Clients"}
+            {profile?.role === "owner" ? "Clients" : "My Clients"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {totalCount} {isOwnerOrAdmin ? "" : "assigned "}client{totalCount !== 1 ? "s" : ""}
+            {totalCount} {profile?.role === "owner" ? "" : "assigned "}client{totalCount !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -141,7 +149,7 @@ const ClientsPage = () => {
             <SelectItem value="critical">Critical (&lt;50)</SelectItem>
           </SelectContent>
         </Select>
-        {isOwnerOrAdmin && (
+        {profile?.role === "owner" && (
           <Select value={assignedFilter} onValueChange={(v) => { setAssignedFilter(v); setPage(1); }}>
             <SelectTrigger className="h-9 w-44 border-border bg-muted/30 text-sm">
               <SelectValue placeholder="All Assigned" />

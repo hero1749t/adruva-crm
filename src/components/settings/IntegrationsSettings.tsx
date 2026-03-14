@@ -14,6 +14,12 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const PROVIDERS = [
   { value: "whatsapp", label: "WhatsApp Business", icon: MessageSquare, color: "text-green-500" },
@@ -48,6 +54,9 @@ export function IntegrationsSettings() {
   const [newProvider, setNewProvider] = useState("whatsapp");
   const [newApiKey, setNewApiKey] = useState("");
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
+  const [editingIntegration, setEditingIntegration] = useState<Integration | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editApiKey, setEditApiKey] = useState("");
 
   const { data: integrations = [], isLoading } = useQuery({
     queryKey: ["integrations"],
@@ -103,6 +112,23 @@ export function IntegrationsSettings() {
     },
   });
 
+  const updateIntegration = useMutation({
+    mutationFn: async ({ id, name, api_key_encrypted }: { id: string; name: string; api_key_encrypted: string }) => {
+      const { error } = await supabase.from("integrations").update({ name, api_key_encrypted }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      toast({ title: "Integration updated" });
+      setEditingIntegration(null);
+      setEditName("");
+      setEditApiKey("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
   const toggleKeyVisibility = (id: string) => {
     setVisibleKeys((prev) => {
       const next = new Set(prev);
@@ -120,6 +146,12 @@ export function IntegrationsSettings() {
 
   const getProviderInfo = (provider: string) =>
     PROVIDERS.find((p) => p.value === provider) || PROVIDERS[PROVIDERS.length - 1];
+
+  const openEdit = (integration: Integration) => {
+    setEditingIntegration(integration);
+    setEditName(integration.name);
+    setEditApiKey(integration.api_key_encrypted);
+  };
 
   if (!isOwner) {
     return (
@@ -273,6 +305,9 @@ export function IntegrationsSettings() {
                     checked={integration.is_active}
                     onCheckedChange={(checked) => toggleActive.mutate({ id: integration.id, is_active: checked })}
                   />
+                  <Button variant="outline" size="sm" className="text-xs" onClick={() => openEdit(integration)}>
+                    Configure
+                  </Button>
                   <button
                     onClick={() => deleteIntegration.mutate(integration.id)}
                     className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
@@ -295,6 +330,41 @@ export function IntegrationsSettings() {
           <li>Use <strong>Custom API</strong> for any other service</li>
         </ul>
       </div>
+
+      <Dialog open={!!editingIntegration} onOpenChange={(open) => !open && setEditingIntegration(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configure Integration</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Display Name</label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="mt-1 border-border bg-muted/30" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">API Key / Token</label>
+              <Input value={editApiKey} onChange={(e) => setEditApiKey(e.target.value)} className="mt-1 border-border bg-muted/30 font-mono text-xs" />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingIntegration(null)}>Cancel</Button>
+              <Button
+                disabled={!editingIntegration || !editName.trim() || !editApiKey.trim() || updateIntegration.isPending}
+                onClick={() => {
+                  if (!editingIntegration) return;
+                  updateIntegration.mutate({
+                    id: editingIntegration.id,
+                    name: editName.trim(),
+                    api_key_encrypted: editApiKey.trim(),
+                  });
+                }}
+              >
+                {updateIntegration.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

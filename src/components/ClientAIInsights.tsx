@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useClientHealthScore } from "@/hooks/useClientHealthScore";
 import {
   Brain, TrendingUp, TrendingDown, Minus, AlertTriangle,
   Sparkles, Loader2, RefreshCw, ChevronRight,
@@ -40,9 +41,76 @@ const priorityColors = {
 
 export function ClientAIInsights({ clientId }: { clientId: string }) {
   const { toast } = useToast();
+  const { healthScore } = useClientHealthScore(clientId);
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
+
+  const generateLocalInsights = async () => {
+    const [{ data: tasks }, { data: client }, { data: leadActivities }] = await Promise.all([
+      supabase
+        .from("tasks")
+        .select("id, status, deadline, updated_at")
+        .eq("client_id", clientId),
+      supabase
+        .from("clients")
+        .select("client_name, billing_status, updated_at")
+        .eq("id", clientId)
+        .maybeSingle(),
+      supabase
+        .from("activity_logs")
+        .select("created_at, action")
+        .eq("entity", "client")
+        .eq("entity_id", clientId)
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
+
+    const now = new Date();
+    const taskList = tasks || [];
+    const overdueTasks = taskList.filter(
+      (task) => task.deadline && new Date(task.deadline) < now && task.status !== "completed"
+    );
+    const pendingTasks = taskList.filter((task) => task.status === "pending" || task.status === "in_progress");
+    const recentActivityCount = (leadActivities || []).length;
+    const score = healthScore?.score ?? 65;
+    const trend: HealthPrediction["trend"] =
+      score >= 80 ? "improving" : score >= 50 ? "stable" : "declining";
+
+    const riskFlags = [
+      ...(overdueTasks.length > 0 ? [`${overdueTasks.length} overdue task(s) need attention`] : []),
+      ...(client?.billing_status === "overdue" ? ["Billing is currently overdue"] : []),
+      ...(recentActivityCount === 0 ? ["No recent client activity logged"] : []),
+    ];
+
+    const recommendedActions: RecommendedAction[] = [
+      ...(overdueTasks.length > 0
+        ? [{ action: "Clear overdue tasks", priority: "high" as const, reason: "Open overdue items reduce delivery confidence." }]
+        : []),
+      ...(pendingTasks.length > 0
+        ? [{ action: "Review pending deliverables", priority: "medium" as const, reason: "Pending work should be prioritized for smoother progress." }]
+        : []),
+      ...(recentActivityCount === 0
+        ? [{ action: "Schedule a client touchpoint", priority: "medium" as const, reason: "A recent update or call can improve retention confidence." }]
+        : [{ action: "Maintain current engagement", priority: "low" as const, reason: "Client activity is being tracked consistently." }]),
+    ];
+
+    return {
+      health_prediction: {
+        score,
+        trend,
+        summary:
+          score >= 80
+            ? "Client health looks strong based on delivery activity and billing."
+            : score >= 50
+              ? "Client health is stable, but a few operational signals need attention."
+              : "Client health is at risk and needs immediate follow-up.",
+      },
+      activity_summary: `${client?.client_name || "This client"} has ${taskList.length} total task(s), ${pendingTasks.length} active task(s), and ${recentActivityCount} recent logged update(s).`,
+      recommended_actions: recommendedActions,
+      risk_flags: riskFlags,
+    } satisfies Insights;
+  };
 
   const generateInsights = async () => {
     setLoading(true);
@@ -57,11 +125,21 @@ export function ClientAIInsights({ clientId }: { clientId: string }) {
       setInsights(data);
       setHasGenerated(true);
     } catch (err: any) {
-      toast({
-        title: "Failed to generate insights",
-        description: err.message || "Please try again later",
-        variant: "destructive",
-      });
+      try {
+        const fallbackInsights = await generateLocalInsights();
+        setInsights(fallbackInsights);
+        setHasGenerated(true);
+        toast({
+          title: "AI insights ready",
+          description: "Live AI function was unavailable, so a local insights fallback was used.",
+        });
+      } catch (fallbackError: any) {
+        toast({
+          title: "Failed to generate insights",
+          description: fallbackError.message || err.message || "Please try again later",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }

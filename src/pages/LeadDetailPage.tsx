@@ -6,9 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyLeadAssigned, notifyClientCreated } from "@/lib/email-notifications";
 import { notifyLeadAssignmentInApp, notifyLeadWonInApp } from "@/lib/in-app-notifications";
+import { executeAutomationRules } from "@/lib/automation-engine";
 import { sendStatusEmail } from "@/lib/send-status-email";
 import { CommunicationLog } from "@/components/CommunicationLog";
 import { CustomFieldsSection } from "@/components/CustomFieldsSection";
+import { PropertyMultiSelect } from "@/components/PropertyMultiSelect";
+import { getPropertyOptionLabels, useEntityPropertyOptions } from "@/lib/property-options";
 import {
   ArrowLeft, Phone, Mail, Building2, Globe, StickyNote,
   Check, X, Pencil, MessageSquare, Calendar, FileText, Send, Loader2, Trash2,
@@ -65,6 +68,7 @@ const LeadDetailPage = () => {
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
   const isOwner = profile?.role === "owner";
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const { sourceOptions, businessTypeOptions, serviceInterestOptions } = useEntityPropertyOptions("lead");
 
   // Inline edit state
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -127,6 +131,22 @@ const LeadDetailPage = () => {
     onSuccess: (_data, updates) => {
       if (updates.status) {
         const oldStatus = lead?.status || "new_lead";
+        executeAutomationRules({
+          triggerEvent: "lead_status_changed",
+          entityId: id!,
+          entityData: {
+            _entity_type: "lead",
+            id: id!,
+            name: lead?.name || "",
+            email: lead?.email || "",
+            status: updates.status as string,
+            assigned_to: lead?.assigned_to || null,
+            source: lead?.source || null,
+          },
+          oldData: {
+            status: oldStatus,
+          },
+        });
         logActivity({ entity: "lead", entityId: id!, action: "status_changed", metadata: { name: lead?.name, to: updates.status } });
         sendStatusEmail({ entity: "lead", entityName: lead?.name || "", oldStatus, newStatus: updates.status as string, assignedTo: lead?.assigned_to });
         // If lead_won, notify about client creation
@@ -258,6 +278,8 @@ const LeadDetailPage = () => {
 
   const assignedProfile = (lead as any).profiles;
   const statusConf = statusConfig[lead.status];
+  const isAssignedLeadMember = lead.assigned_to === profile?.id;
+  const canManageLead = isOwnerOrAdmin || isAssignedLeadMember;
 
   const InfoRow = ({
     icon: Icon,
@@ -298,7 +320,7 @@ const LeadDetailPage = () => {
         ) : (
           <div className="flex items-center gap-1.5">
             <p className="text-sm text-foreground">{value || "—"}</p>
-            {editable && isOwnerOrAdmin && (
+            {editable && canManageLead && (
               <button
                 onClick={() => startEdit(field, value || "")}
                 className="opacity-0 transition-opacity group-hover:opacity-100"
@@ -354,7 +376,7 @@ const LeadDetailPage = () => {
                 <Select
                   value={lead.status}
                   onValueChange={(v) => updateLead.mutate({ status: v })}
-                  disabled={!isOwnerOrAdmin}
+                  disabled={!canManageLead}
                 >
                   <SelectTrigger className="h-9 border-border bg-muted/30 text-sm">
                     <SelectValue />
@@ -398,8 +420,73 @@ const LeadDetailPage = () => {
               <InfoRow icon={Phone} label="Phone" field="phone" value={lead.phone} />
               <InfoRow icon={Mail} label="Email" field="email" value={lead.email} />
               <InfoRow icon={Building2} label="Company" field="company_name" value={lead.company_name} />
-              <InfoRow icon={Globe} label="Source" field="source" value={lead.source} />
-              <InfoRow icon={Globe} label="Service Interest" field="service_interest" value={Array.isArray(lead.service_interest) ? lead.service_interest.join(", ") : lead.service_interest} />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-4">
+            <h2 className="mb-3 font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
+              Lead Attributes
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                  Source
+                </p>
+                <Select
+                  value={lead.source || ""}
+                  onValueChange={(value) => updateLead.mutate({ source: value || null })}
+                  disabled={!canManageLead}
+                >
+                  <SelectTrigger className="h-9 border-border bg-muted/30 text-sm">
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sourceOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                  Business Type
+                </p>
+                <Select
+                  value={lead.business_type || ""}
+                  onValueChange={(value) => updateLead.mutate({ business_type: value || null })}
+                  disabled={!canManageLead}
+                >
+                  <SelectTrigger className="h-9 border-border bg-muted/30 text-sm">
+                    <SelectValue placeholder="Select business type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {businessTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                  Service Interest
+                </p>
+                <PropertyMultiSelect
+                  options={serviceInterestOptions}
+                  value={lead.service_interest || []}
+                  onChange={(value) => updateLead.mutate({ service_interest: value.length ? value : null })}
+                  placeholder="Select interested services"
+                  disabled={!canManageLead}
+                />
+                {!!lead.service_interest?.length && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {getPropertyOptionLabels(serviceInterestOptions, lead.service_interest).join(", ")}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -426,10 +513,10 @@ const LeadDetailPage = () => {
             ) : (
               <div
                 className="group cursor-pointer rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/30"
-                onClick={() => isOwnerOrAdmin && startEdit("notes", lead.notes || "")}
+                onClick={() => canManageLead && startEdit("notes", lead.notes || "")}
               >
                 {lead.notes || <span className="text-muted-foreground">No notes yet. Click to add.</span>}
-                {isOwnerOrAdmin && (
+                {canManageLead && (
                   <Pencil className="ml-2 inline h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
                 )}
               </div>

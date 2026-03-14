@@ -36,6 +36,35 @@ const statusConfig: Record<InvoiceStatus, { label: string; color: string }> = {
   cancelled: { label: "Cancelled", color: "bg-muted text-muted-foreground" },
 };
 
+const paymentStatusConfig: Record<string, { label: string; color: string }> = {
+  due: { label: "Due", color: "bg-warning/20 text-warning" },
+  paid: { label: "Paid", color: "bg-success/20 text-success" },
+  overdue: { label: "Overdue", color: "bg-destructive/20 text-destructive" },
+};
+
+const INVOICE_PREFIX = "ADR";
+
+const getFinancialYearCode = (date = new Date()) => {
+  const currentYear = date.getFullYear();
+  const month = date.getMonth();
+  const startYear = month >= 3 ? currentYear : currentYear - 1;
+  const endYear = startYear + 1;
+  return `${String(startYear % 100).padStart(2, "0")}${String(endYear % 100).padStart(2, "0")}`;
+};
+
+const getNextInvoiceNumber = (invoices: any[]) => {
+  const financialYearCode = getFinancialYearCode();
+  const pattern = new RegExp(`^${INVOICE_PREFIX}-${financialYearCode}-(\\d{4})$`);
+  const maxSequence = invoices.reduce((max, invoice) => {
+    const invoiceNumber = typeof invoice?.invoice_number === "string" ? invoice.invoice_number : "";
+    const match = invoiceNumber.match(pattern);
+    if (!match) return max;
+    return Math.max(max, Number(match[1]));
+  }, 0);
+
+  return `${INVOICE_PREFIX}-${financialYearCode}-${String(maxSequence + 1).padStart(4, "0")}`;
+};
+
 const InvoicesPage = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -55,6 +84,8 @@ const InvoicesPage = () => {
   const [formPeriodEnd, setFormPeriodEnd] = useState("");
   const [formNotes, setFormNotes] = useState("");
   const [formInstallmentType, setFormInstallmentType] = useState("monthly");
+  const [busyInvoiceId, setBusyInvoiceId] = useState<string | null>(null);
+  const [deletingInvoiceId, setDeletingInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     runPaymentAutomationSweep().catch(() => undefined);
@@ -65,7 +96,7 @@ const InvoicesPage = () => {
     queryFn: async () => {
       let query = supabase
         .from("invoices")
-        .select("*, clients!invoices_client_id_fkey(client_name, company_name)")
+        .select("*, clients!invoices_client_id_fkey(client_name, company_name, plan, services)")
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") {
@@ -83,9 +114,20 @@ const InvoicesPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, client_name, company_name, monthly_payment")
+        .select("id, client_name, company_name, monthly_payment, plan, services")
         .in("status", ["new", "active", "paused"])
         .order("client_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: templateAssignments = [] } = useQuery({
+    queryKey: ["invoice-client-template-assignments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_service_template_assignments")
+        .select("client_id, service_templates!client_service_template_assignments_service_template_id_fkey(name)");
       if (error) throw error;
       return data || [];
     },
@@ -129,6 +171,9 @@ const InvoicesPage = () => {
       const { error } = await supabase.from("invoices").update(updates).eq("id", id);
       if (error) throw error;
     },
+    onMutate: ({ id }) => {
+      setBusyInvoiceId(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
@@ -138,6 +183,9 @@ const InvoicesPage = () => {
     onError: (err: Error) => {
       toast({ title: "Update failed", description: err.message, variant: "destructive" });
     },
+    onSettled: () => {
+      setBusyInvoiceId(null);
+    },
   });
 
   const deleteInvoice = useMutation({
@@ -145,12 +193,18 @@ const InvoicesPage = () => {
       const { error } = await supabase.from("invoices").delete().eq("id", id);
       if (error) throw error;
     },
+    onMutate: (id) => {
+      setDeletingInvoiceId(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       toast({ title: "Invoice deleted" });
     },
     onError: (err: Error) => {
       toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    },
+    onSettled: () => {
+      setDeletingInvoiceId(null);
     },
   });
 
@@ -189,6 +243,31 @@ const InvoicesPage = () => {
     .filter((invoice: any) => invoice.payment_status === "paid" || invoice.status === "paid")
     .reduce((sum: number, invoice: any) => sum + (invoice.total_amount || 0), 0);
   const overdueCount = filteredInvoices.filter((invoice: any) => invoice.payment_status === "overdue" || invoice.status === "overdue").length;
+  const selectedClient = clients.find((client) => client.id === formClientId);
+  const selectedClientTemplateNames = templateAssignments
+    .filter((assignment: any) => assignment.client_id === formClientId)
+    .map((assignment: any) => assignment.service_templates?.name)
+    .filter(Boolean);
+
+  const renderTags = (values: string[] | null | undefined, emptyLabel: string) => {
+    if (!values?.length) {
+      return <span className="text-xs text-muted-foreground">{emptyLabel}</span>;
+    }
+
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {values.map((value) => (
+          <span
+            key={value}
+            className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-foreground"
+          >
+            {String(value).replaceAll("_", " ")}
+          </span>
+        ))}
+      </div>
+    );
+  };
+  const nextInvoiceNumber = getNextInvoiceNumber(invoices);
 
   return (
     <div className="space-y-6">
@@ -204,11 +283,15 @@ const InvoicesPage = () => {
                 <Plus className="h-4 w-4" /> New Invoice
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Create Invoice</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-2">
+                <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Auto Invoice Number</p>
+                  <p className="mt-1 font-mono text-sm font-semibold text-foreground">{nextInvoiceNumber}</p>
+                </div>
                 <div>
                   <label className="mb-1 block font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Client</label>
                   <Select value={formClientId} onValueChange={handleClientSelect}>
@@ -221,6 +304,40 @@ const InvoicesPage = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/20 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Client Services</p>
+                    {!selectedClient && <span className="text-[11px] text-muted-foreground">Select a client to load services</span>}
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    <div>
+                      <p className="text-[11px] font-medium text-foreground">Subscribed Services</p>
+                      <div className="mt-1">
+                        {selectedClient
+                          ? renderTags(selectedClient.services, "No client services added yet")
+                          : <span className="text-xs text-muted-foreground">No client selected</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium text-foreground">Applied Templates</p>
+                      <div className="mt-1">
+                        {selectedClient
+                          ? renderTags(selectedClientTemplateNames, "No service templates assigned yet")
+                          : <span className="text-xs text-muted-foreground">No client selected</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium text-foreground">Plan</p>
+                      <div className="mt-1">
+                        {selectedClient?.plan ? (
+                          <span className="text-xs text-foreground">{String(selectedClient.plan).replaceAll("_", " ")}</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{selectedClient ? "No plan added yet" : "No client selected"}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -334,6 +451,7 @@ const InvoicesPage = () => {
                 <tr className="border-b border-border bg-muted/30">
                   <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Invoice</th>
                   <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Client</th>
+                  <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Services</th>
                   <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Amount</th>
                   <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Payment</th>
                   <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Due Date</th>
@@ -347,31 +465,55 @@ const InvoicesPage = () => {
                 {filteredInvoices.map((invoice: any) => {
                   const paymentStatus = invoice.payment_status || (invoice.status === "paid" ? "paid" : invoice.status === "overdue" ? "overdue" : "due");
                   const statusStyle = statusConfig[(invoice.status as InvoiceStatus) || "draft"] || statusConfig.draft;
+                  const paymentStyle = paymentStatusConfig[paymentStatus] || paymentStatusConfig.due;
+                  const invoiceTemplateNames = templateAssignments
+                    .filter((assignment: any) => assignment.client_id === invoice.client_id)
+                    .map((assignment: any) => assignment.service_templates?.name)
+                    .filter(Boolean);
+                  const rowBusy = busyInvoiceId === invoice.id || deletingInvoiceId === invoice.id;
                   return (
                     <tr key={invoice.id} className="border-b border-border last:border-0 align-top hover:bg-muted/20">
                       <td className="px-4 py-3">
                         <p className="font-mono text-sm font-medium text-foreground">{invoice.invoice_number}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{invoice.notes || "No notes"}</p>
+                        <div className="mt-1">
+                          <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${statusStyle.color}`}>
+                            {statusStyle.label}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">{invoice.notes || "No notes"}</p>
                       </td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-foreground">{invoice.clients?.client_name || "Unknown"}</p>
                         {invoice.clients?.company_name && <p className="text-xs text-muted-foreground">{invoice.clients.company_name}</p>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Client Services</p>
+                            <div className="mt-1">{renderTags(invoice.clients?.services, "No services")}</div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Templates</p>
+                            <div className="mt-1">{renderTags(invoiceTemplateNames, "No templates")}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-mono font-medium text-foreground">₹{Number(invoice.total_amount || 0).toLocaleString("en-IN")}</td>
                       <td className="px-4 py-3">
                         {isOwnerOrAdmin ? (
                           <Select
                             value={paymentStatus}
+                            disabled={rowBusy}
                             onValueChange={(value) => updateInvoice.mutate({
                               id: invoice.id,
                               updates: {
                                 payment_status: value,
-                                status: value === "paid" ? "paid" : value === "overdue" ? "overdue" : invoice.status,
-                                last_payment_date: value === "paid" ? new Date().toISOString().slice(0, 10) : invoice.last_payment_date,
+                                status: value === "paid" ? "paid" : value === "overdue" ? "overdue" : invoice.status === "draft" ? "draft" : "sent",
+                                last_payment_date: value === "paid" ? new Date().toISOString().slice(0, 10) : value === "due" ? null : invoice.last_payment_date,
                               },
                             })}
                           >
-                            <SelectTrigger className={`h-8 w-[110px] border-0 text-xs ${statusStyle.color}`}>
+                            <SelectTrigger className={`h-8 w-[110px] border-0 text-xs ${paymentStyle.color}`}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -381,8 +523,8 @@ const InvoicesPage = () => {
                             </SelectContent>
                           </Select>
                         ) : (
-                          <span className={`rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider ${statusStyle.color}`}>
-                            {paymentStatus}
+                          <span className={`rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider ${paymentStyle.color}`}>
+                            {paymentStyle.label}
                           </span>
                         )}
                       </td>
@@ -391,10 +533,17 @@ const InvoicesPage = () => {
                           <Input
                             type="date"
                             className="h-8 w-[145px]"
+                            disabled={rowBusy}
                             defaultValue={invoice.due_date?.slice(0, 10) || ""}
                             onBlur={(e) => {
                               if (e.target.value && e.target.value !== invoice.due_date?.slice(0, 10)) {
-                                updateInvoice.mutate({ id: invoice.id, updates: { due_date: e.target.value } });
+                                updateInvoice.mutate({
+                                  id: invoice.id,
+                                  updates: {
+                                    due_date: e.target.value,
+                                    next_payment_date: invoice.next_payment_date || e.target.value,
+                                  },
+                                });
                               }
                             }}
                           />
@@ -407,6 +556,7 @@ const InvoicesPage = () => {
                           <Input
                             type="date"
                             className="h-8 w-[145px]"
+                            disabled={rowBusy}
                             defaultValue={invoice.next_payment_date || invoice.due_date?.slice(0, 10) || ""}
                             onBlur={(e) => {
                               if (e.target.value !== (invoice.next_payment_date || invoice.due_date?.slice(0, 10) || "")) {
@@ -422,6 +572,7 @@ const InvoicesPage = () => {
                         {isOwnerOrAdmin ? (
                           <Select
                             value={invoice.installment_type || "monthly"}
+                            disabled={rowBusy}
                             onValueChange={(value) => updateInvoice.mutate({ id: invoice.id, updates: { installment_type: value } })}
                           >
                             <SelectTrigger className="h-8 w-[140px]">
@@ -441,6 +592,7 @@ const InvoicesPage = () => {
                           <Input
                             type="date"
                             className="h-8 w-[145px]"
+                            disabled={rowBusy}
                             defaultValue={invoice.last_payment_date || ""}
                             onBlur={(e) => {
                               if (e.target.value !== (invoice.last_payment_date || "")) {
@@ -458,21 +610,26 @@ const InvoicesPage = () => {
                             <Button
                               variant="ghost"
                               size="sm"
+                              disabled={rowBusy}
                               onClick={() => updateInvoice.mutate({ id: invoice.id, updates: { status: "sent" } })}
                             >
-                              Send
+                              {busyInvoiceId === invoice.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
                             </Button>
                             {isOwner && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="text-destructive"
+                                disabled={rowBusy}
                                 onClick={() => {
+                                  if (!window.confirm(`Delete invoice ${invoice.invoice_number || "draft invoice"}?`)) {
+                                    return;
+                                  }
                                   logActivity({ entity: "invoice", entityId: invoice.id, action: "deleted", metadata: { invoice: invoice.invoice_number } });
                                   deleteInvoice.mutate(invoice.id);
                                 }}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                {deletingInvoiceId === invoice.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                               </Button>
                             )}
                           </div>

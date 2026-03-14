@@ -160,7 +160,7 @@ const NewClientDialog = ({ open, onOpenChange }: NewClientDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display">New Client</DialogTitle>
           <DialogDescription>Add a new client. They will be assigned to you automatically.</DialogDescription>
