@@ -54,7 +54,7 @@ const getFinancialYearCode = (date = new Date()) => {
 
 const getNextInvoiceNumber = (invoices: any[]) => {
   const financialYearCode = getFinancialYearCode();
-  const pattern = new RegExp(`^${INVOICE_PREFIX}-${financialYearCode}-(\\d{4})$`);
+  const pattern = new RegExp(`^${INVOICE_PREFIX}-${financialYearCode}-(\\d{5})$`);
   const maxSequence = invoices.reduce((max, invoice) => {
     const invoiceNumber = typeof invoice?.invoice_number === "string" ? invoice.invoice_number : "";
     const match = invoiceNumber.match(pattern);
@@ -62,7 +62,7 @@ const getNextInvoiceNumber = (invoices: any[]) => {
     return Math.max(max, Number(match[1]));
   }, 0);
 
-  return `${INVOICE_PREFIX}-${financialYearCode}-${String(maxSequence + 1).padStart(4, "0")}`;
+  return `${INVOICE_PREFIX}-${financialYearCode}-${String(maxSequence + 1).padStart(5, "0")}`;
 };
 
 const InvoicesPage = () => {

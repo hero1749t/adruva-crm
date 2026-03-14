@@ -22,7 +22,7 @@ BEGIN
   SELECT COALESCE(
     MAX(
       CASE
-        WHEN invoice_number ~ ('^ADR-' || fy_code || '-[0-9]{4}$')
+        WHEN invoice_number ~ ('^ADR-' || fy_code || '-[0-9]{5}$')
         THEN CAST(split_part(invoice_number, '-', 3) AS integer)
         ELSE NULL
       END
@@ -32,7 +32,7 @@ BEGIN
   INTO next_num
   FROM public.invoices;
 
-  NEW.invoice_number := 'ADR-' || fy_code || '-' || LPAD(next_num::text, 4, '0');
+  NEW.invoice_number := 'ADR-' || fy_code || '-' || LPAD(next_num::text, 5, '0');
   RETURN NEW;
 END;
 $$;
