@@ -8,6 +8,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/hooks/useActivityLog";
 import { runPaymentAutomationSweep } from "@/lib/payment-automation";
+import { calculateNextInvoicePaymentDate } from "@/lib/invoice-schedule";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -116,6 +117,7 @@ const InvoicesPage = () => {
   const [formAmount, setFormAmount] = useState("");
   const [formTax, setFormTax] = useState("");
   const [formDueDate, setFormDueDate] = useState("");
+  const [formNextPaymentDate, setFormNextPaymentDate] = useState("");
   const [formPeriodStart, setFormPeriodStart] = useState("");
   const [formPeriodEnd, setFormPeriodEnd] = useState("");
   const [formNotes, setFormNotes] = useState("");
@@ -195,7 +197,13 @@ const InvoicesPage = () => {
         created_by: profile?.id,
         status: "draft" as InvoiceStatus,
         payment_status: "due",
-        next_payment_date: formDueDate,
+        next_payment_date: formInstallmentType === "twice_a_month"
+          ? (formNextPaymentDate || calculateNextInvoicePaymentDate({
+              installmentType: formInstallmentType,
+              dueDate: formDueDate,
+              referenceDate: formDueDate,
+            }))
+          : formDueDate,
       });
       if (error) throw error;
     },
@@ -257,6 +265,7 @@ const InvoicesPage = () => {
     setFormAmount("");
     setFormTax("");
     setFormDueDate("");
+    setFormNextPaymentDate("");
     setFormPeriodStart("");
     setFormPeriodEnd("");
     setFormNotes("");
@@ -312,6 +321,13 @@ const InvoicesPage = () => {
     );
   };
   const nextInvoiceNumber = getNextInvoiceNumber(invoiceNumberSeed);
+
+  const getNextDueFromInvoice = (invoice: any, referenceDate?: string | null) =>
+    calculateNextInvoicePaymentDate({
+      installmentType: invoice.installment_type || "monthly",
+      dueDate: invoice.due_date || null,
+      referenceDate: referenceDate ?? invoice.last_payment_date ?? invoice.due_date ?? null,
+    });
 
   return (
     <div className="space-y-6">
@@ -394,10 +410,41 @@ const InvoicesPage = () => {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <InvoiceDateField label="Due Date" value={formDueDate} onChange={setFormDueDate} />
+                  <InvoiceDateField
+                    label="Due Date"
+                    value={formDueDate}
+                    onChange={(value) => {
+                      setFormDueDate(value);
+                      if (formInstallmentType === "twice_a_month") {
+                        setFormNextPaymentDate(
+                          calculateNextInvoicePaymentDate({
+                            installmentType: formInstallmentType,
+                            dueDate: value,
+                            referenceDate: value,
+                          }) || ""
+                        );
+                      }
+                    }}
+                  />
                   <div>
                     <label className="mb-1 block font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Installment</label>
-                    <Select value={formInstallmentType} onValueChange={setFormInstallmentType}>
+                    <Select
+                      value={formInstallmentType}
+                      onValueChange={(value) => {
+                        setFormInstallmentType(value);
+                        if (value === "twice_a_month") {
+                          setFormNextPaymentDate((current) =>
+                            current || calculateNextInvoicePaymentDate({
+                              installmentType: value,
+                              dueDate: formDueDate,
+                              referenceDate: formDueDate,
+                            }) || ""
+                          );
+                        } else {
+                          setFormNextPaymentDate("");
+                        }
+                      }}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="monthly">Monthly</SelectItem>
@@ -406,6 +453,13 @@ const InvoicesPage = () => {
                     </Select>
                   </div>
                 </div>
+                {formInstallmentType === "twice_a_month" && (
+                  <InvoiceDateField
+                    label="Next Due Date"
+                    value={formNextPaymentDate}
+                    onChange={setFormNextPaymentDate}
+                  />
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <InvoiceDateField label="Period Start" value={formPeriodStart} onChange={setFormPeriodStart} />
                   <InvoiceDateField label="Period End" value={formPeriodEnd} onChange={setFormPeriodEnd} />
@@ -537,18 +591,26 @@ const InvoicesPage = () => {
                       </td>
                       <td className="px-4 py-3 font-mono font-medium text-foreground">₹{Number(invoice.total_amount || 0).toLocaleString("en-IN")}</td>
                       <td className="px-4 py-3">
-                        {isOwnerOrAdmin ? (
+                        {(invoice.installment_type || "monthly") === "twice_a_month" && isOwnerOrAdmin ? (
                           <Select
                             value={paymentStatus}
                             disabled={rowBusy}
-                            onValueChange={(value) => updateInvoice.mutate({
-                              id: invoice.id,
-                              updates: {
-                                payment_status: value,
-                                status: value === "paid" ? "paid" : value === "overdue" ? "overdue" : invoice.status === "draft" ? "draft" : "sent",
-                                last_payment_date: value === "paid" ? new Date().toISOString().slice(0, 10) : value === "due" ? null : invoice.last_payment_date,
-                              },
-                            })}
+                            onValueChange={(value) => {
+                              const paidOn = new Date().toISOString().slice(0, 10);
+                              updateInvoice.mutate({
+                                id: invoice.id,
+                                updates: {
+                                  payment_status: value,
+                                  status: value === "paid" ? "paid" : value === "overdue" ? "overdue" : invoice.status === "draft" ? "draft" : "sent",
+                                  last_payment_date: value === "paid" ? paidOn : value === "due" ? null : invoice.last_payment_date,
+                                  next_payment_date: value === "paid"
+                                    ? getNextDueFromInvoice(invoice, paidOn)
+                                    : value === "due"
+                                      ? invoice.next_payment_date || invoice.due_date || null
+                                      : invoice.next_payment_date,
+                                },
+                              });
+                            }}
                           >
                             <SelectTrigger className={`h-8 w-[110px] border-0 text-xs ${paymentStyle.color}`}>
                               <SelectValue />
@@ -574,11 +636,17 @@ const InvoicesPage = () => {
                             defaultValue={invoice.due_date?.slice(0, 10) || ""}
                             onBlur={(e) => {
                               if (e.target.value && e.target.value !== invoice.due_date?.slice(0, 10)) {
+                                const shouldSyncNextDue =
+                                  !invoice.last_payment_date ||
+                                  !invoice.next_payment_date ||
+                                  invoice.next_payment_date === invoice.due_date?.slice(0, 10);
                                 updateInvoice.mutate({
                                   id: invoice.id,
                                   updates: {
                                     due_date: e.target.value,
-                                    next_payment_date: invoice.next_payment_date || e.target.value,
+                                    next_payment_date: shouldSyncNextDue
+                                      ? e.target.value
+                                      : invoice.next_payment_date || e.target.value,
                                   },
                                 });
                               }
@@ -602,7 +670,11 @@ const InvoicesPage = () => {
                             }}
                           />
                         ) : (
-                          <span className="text-muted-foreground">{invoice.next_payment_date || "—"}</span>
+                          <span className="text-muted-foreground">
+                            {(invoice.installment_type || "monthly") === "twice_a_month"
+                              ? (invoice.next_payment_date || "—")
+                              : "Auto monthly"}
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -610,7 +682,17 @@ const InvoicesPage = () => {
                           <Select
                             value={invoice.installment_type || "monthly"}
                             disabled={rowBusy}
-                            onValueChange={(value) => updateInvoice.mutate({ id: invoice.id, updates: { installment_type: value } })}
+                            onValueChange={(value) => updateInvoice.mutate({
+                              id: invoice.id,
+                              updates: {
+                                installment_type: value,
+                                next_payment_date: calculateNextInvoicePaymentDate({
+                                  installmentType: value,
+                                  dueDate: invoice.due_date || null,
+                                  referenceDate: invoice.last_payment_date || invoice.due_date || null,
+                                }),
+                              },
+                            })}
                           >
                             <SelectTrigger className="h-8 w-[140px]">
                               <SelectValue />
@@ -633,7 +715,15 @@ const InvoicesPage = () => {
                             defaultValue={invoice.last_payment_date || ""}
                             onBlur={(e) => {
                               if (e.target.value !== (invoice.last_payment_date || "")) {
-                                updateInvoice.mutate({ id: invoice.id, updates: { last_payment_date: e.target.value || null } });
+                                updateInvoice.mutate({
+                                  id: invoice.id,
+                                  updates: {
+                                    last_payment_date: e.target.value || null,
+                                    next_payment_date: e.target.value
+                                      ? getNextDueFromInvoice(invoice, e.target.value)
+                                      : invoice.due_date || null,
+                                  },
+                                });
                               }
                             }}
                           />

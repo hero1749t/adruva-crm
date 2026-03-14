@@ -31,6 +31,7 @@ import { CustomFieldsSection } from "@/components/CustomFieldsSection";
 import { PropertyMultiSelect } from "@/components/PropertyMultiSelect";
 import { getPropertyOptionLabels, useEntityPropertyOptions } from "@/lib/property-options";
 import { runPaymentAutomationSweep } from "@/lib/payment-automation";
+import { calculateNextInvoicePaymentDate } from "@/lib/invoice-schedule";
 
 type ClientStatus = Database["public"]["Enums"]["client_status"];
 type BillingStatus = Database["public"]["Enums"]["billing_status"];
@@ -80,6 +81,13 @@ const ClientDetailPage = () => {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const { healthScore } = useClientHealthScore(id || "");
+
+  const getNextDueFromInvoice = (invoice: any, referenceDate?: string | null) =>
+    calculateNextInvoicePaymentDate({
+      installmentType: invoice.installment_type || "monthly",
+      dueDate: invoice.due_date || null,
+      referenceDate: referenceDate ?? invoice.last_payment_date ?? invoice.due_date ?? null,
+    });
 
   useEffect(() => {
     runPaymentAutomationSweep().catch(() => undefined);
@@ -782,7 +790,17 @@ const ClientDetailPage = () => {
                       {isOwnerOrAdmin ? (
                         <Select
                           value={inv.installment_type || "monthly"}
-                          onValueChange={(value) => updateInvoice.mutate({ invoiceId: inv.id, updates: { installment_type: value } })}
+                          onValueChange={(value) => updateInvoice.mutate({
+                            invoiceId: inv.id,
+                            updates: {
+                              installment_type: value,
+                              next_payment_date: calculateNextInvoicePaymentDate({
+                                installmentType: value,
+                                dueDate: inv.due_date || null,
+                                referenceDate: inv.last_payment_date || inv.due_date || null,
+                              }),
+                            },
+                          })}
                         >
                           <SelectTrigger className="h-7 w-[130px] border-border bg-muted/30 text-[11px]">
                             <SelectValue />
@@ -807,7 +825,17 @@ const ClientDetailPage = () => {
                         onBlur={(e) => {
                           const value = e.target.value;
                           if (value && value !== inv.due_date?.slice(0, 10)) {
-                            updateInvoice.mutate({ invoiceId: inv.id, updates: { due_date: value, next_payment_date: value } });
+                            const shouldSyncNextDue =
+                              !inv.last_payment_date ||
+                              !inv.next_payment_date ||
+                              inv.next_payment_date === inv.due_date?.slice(0, 10);
+                            updateInvoice.mutate({
+                              invoiceId: inv.id,
+                              updates: {
+                                due_date: value,
+                                next_payment_date: shouldSyncNextDue ? value : inv.next_payment_date || value,
+                              },
+                            });
                           }
                         }}
                       />
@@ -819,14 +847,22 @@ const ClientDetailPage = () => {
                     {isOwnerOrAdmin ? (
                       <Select
                         value={inv.payment_status || "due"}
-                        onValueChange={(value) => updateInvoice.mutate({
-                          invoiceId: inv.id,
-                          updates: {
-                            payment_status: value,
-                            status: value === "paid" ? "paid" : value === "overdue" ? "overdue" : inv.status,
-                            last_payment_date: value === "paid" ? new Date().toISOString().slice(0, 10) : inv.last_payment_date,
-                          },
-                        })}
+                        onValueChange={(value) => {
+                          const paidOn = new Date().toISOString().slice(0, 10);
+                          updateInvoice.mutate({
+                            invoiceId: inv.id,
+                            updates: {
+                              payment_status: value,
+                              status: value === "paid" ? "paid" : value === "overdue" ? "overdue" : inv.status,
+                              last_payment_date: value === "paid" ? paidOn : value === "due" ? null : inv.last_payment_date,
+                              next_payment_date: value === "paid"
+                                ? getNextDueFromInvoice(inv, paidOn)
+                                : value === "due"
+                                  ? inv.next_payment_date || inv.due_date || null
+                                  : inv.next_payment_date,
+                            },
+                          });
+                        }}
                       >
                         <SelectTrigger className="h-7 border-border bg-muted/30 text-[11px]">
                           <SelectValue />
@@ -849,14 +885,22 @@ const ClientDetailPage = () => {
                         defaultValue={inv.last_payment_date || ""}
                         onBlur={(e) => {
                           if (e.target.value !== (inv.last_payment_date || "")) {
-                            updateInvoice.mutate({ invoiceId: inv.id, updates: { last_payment_date: e.target.value || null } });
+                            updateInvoice.mutate({
+                              invoiceId: inv.id,
+                              updates: {
+                                last_payment_date: e.target.value || null,
+                                next_payment_date: e.target.value
+                                  ? getNextDueFromInvoice(inv, e.target.value)
+                                  : inv.due_date || null,
+                              },
+                            });
                           }
                         }}
                       />
                     ) : (
                       <span className="text-xs text-muted-foreground">{inv.last_payment_date || "—"}</span>
                     )}
-                    {isOwnerOrAdmin ? (
+                    {(inv.installment_type || "monthly") === "twice_a_month" && isOwnerOrAdmin ? (
                       <Input
                         type="date"
                         className="h-8"
@@ -869,7 +913,11 @@ const ClientDetailPage = () => {
                         }}
                       />
                     ) : (
-                      <span className="text-xs text-muted-foreground">{inv.next_payment_date || "—"}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {(inv.installment_type || "monthly") === "twice_a_month"
+                          ? (inv.next_payment_date || "—")
+                          : "Auto monthly"}
+                      </span>
                     )}
                     {isOwnerOrAdmin && (
                       <div className="flex items-center justify-end gap-1">
