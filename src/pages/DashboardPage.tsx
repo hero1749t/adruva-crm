@@ -30,11 +30,11 @@ import { MyWorkCard } from "@/components/dashboard/MyWorkCard";
 import { BRAND } from "@/lib/brand";
 
 const CHART_COLORS = [
-  "hsl(217, 91%, 60%)", "hsl(199, 89%, 48%)", "hsl(160, 84%, 39%)",
-  "hsl(38, 92%, 50%)", "hsl(0, 84%, 60%)", "hsl(215, 25%, 53%)",
+  "#FF6B00", "#2D8CFF", "hsl(160, 84%, 39%)",
+  "hsl(38, 92%, 50%)", "hsl(0, 84%, 60%)", "#8A94A6",
 ];
 const FUNNEL_COLORS = [
-  "hsl(217, 91%, 60%)", "hsl(199, 89%, 48%)", "hsl(38, 92%, 50%)",
+  "#FF6B00", "#2D8CFF", "hsl(38, 92%, 50%)",
   "hsl(160, 84%, 39%)", "hsl(142, 71%, 45%)",
 ];
 const TOOLTIP_STYLE = {
@@ -270,10 +270,12 @@ const DashboardPage = () => {
   });
 
   const clientDonut = [
+    { name: "New", value: myClients.filter((c) => c.status === "new").length, status: "new" },
     { name: "Active", value: myClients.filter((c) => c.status === "active").length, status: "active" },
     { name: "Paused", value: myClients.filter((c) => c.status === "paused").length, status: "paused" },
     { name: "Completed", value: myClients.filter((c) => c.status === "completed").length, status: "completed" },
   ];
+  const visibleClientDonut = clientDonut.filter((segment) => segment.value > 0);
 
   // Task completion over range (adaptive weeks)
   const weekCount = Math.min(Math.ceil(days / 7), 12);
@@ -505,44 +507,62 @@ const DashboardPage = () => {
           <div className="rounded-2xl glass p-5 transition-all hover:glow-sm">
             <h3 className="mb-4 font-display text-base font-bold text-foreground">Lead Funnel</h3>
             <p className="mb-2 text-[10px] text-muted-foreground">Click a bar to filter leads</p>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={funnelData} layout="vertical" margin={{ left: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(213, 50%, 24%)" />
-                <XAxis type="number" stroke="hsl(215, 25%, 53%)" fontSize={12} />
-                <YAxis dataKey="name" type="category" stroke="hsl(215, 25%, 53%)" fontSize={11} width={100} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Bar
-                  dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer"
-                  onClick={(_: any, idx: number) => handleFunnelBarClick(funnelData[idx])}
-                  isAnimationActive={true} animationDuration={800} animationEasing="ease-out"
-                >
-                  {funnelData.map((_, i) => (
-                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} className="transition-opacity hover:opacity-80" />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {totalLeads === 0 ? (
+              <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/10">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">No leads available yet</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Create or assign a lead to make the funnel visible here.</p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={funnelData.filter((item) => item.count > 0)} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(213, 50%, 24%)" />
+                  <XAxis type="number" stroke="hsl(215, 25%, 53%)" fontSize={12} />
+                  <YAxis dataKey="name" type="category" stroke="hsl(215, 25%, 53%)" fontSize={11} width={100} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Bar
+                    dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer"
+                    onClick={(_: any, idx: number) => handleFunnelBarClick(funnelData.filter((item) => item.count > 0)[idx])}
+                    isAnimationActive={true} animationDuration={800} animationEasing="ease-out"
+                  >
+                    {funnelData.filter((item) => item.count > 0).map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} className="transition-opacity hover:opacity-80" />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           <div className="rounded-2xl glass p-5 transition-all hover:glow-sm">
             <h3 className="mb-4 font-display text-base font-bold text-foreground">Client Status</h3>
             <p className="mb-2 text-[10px] text-muted-foreground">Click a slice to filter clients</p>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={clientDonut} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
-                  dataKey="value" stroke="none" cursor="pointer"
-                  onClick={(data: any) => handleDonutClick(data)}
-                  isAnimationActive={true} animationDuration={1000} animationEasing="ease-out"
-                >
-                  {clientDonut.map((_, i) => (
-                    <Cell key={i} fill={[CHART_COLORS[2], CHART_COLORS[3], CHART_COLORS[5]][i]} className="transition-opacity hover:opacity-80" />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
+            {visibleClientDonut.length === 0 ? (
+              <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/10">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">No clients available yet</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Once clients are created, their status split will appear here.</p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={visibleClientDonut} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
+                    dataKey="value" stroke="none" cursor="pointer"
+                    onClick={(data: any) => handleDonutClick(data)}
+                    isAnimationActive={true} animationDuration={1000} animationEasing="ease-out"
+                  >
+                    {visibleClientDonut.map((_, i) => (
+                      <Cell key={i} fill={["#2D8CFF", "hsl(160, 84%, 39%)", "hsl(38, 92%, 50%)", "#8A94A6"][i]} className="transition-opacity hover:opacity-80" />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       ) : (
