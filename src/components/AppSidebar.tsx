@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions, type RolePermissions } from "@/hooks/usePermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { BRAND } from "@/lib/brand";
 
 type NavItem = {
   icon: React.ElementType;
@@ -71,9 +72,14 @@ export function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProps) {
             A
           </div>
           {(!collapsed || isMobileView) && (
-            <span className="font-display text-lg font-bold tracking-tight text-foreground">
-              ADRUVA <span className="gradient-text">CRM</span>
-            </span>
+            <div className="min-w-0">
+              <div className="font-display text-lg font-bold tracking-tight text-foreground">
+                {BRAND.shortName} <span className="gradient-text">Solution</span>
+              </div>
+              <p className="truncate text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {BRAND.tagline}
+              </p>
+            </div>
           )}
         </div>
         {isMobileView && (

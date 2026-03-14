@@ -4,6 +4,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { BRAND } from "@/lib/brand";
 
 const ResetPasswordPage = () => {
   const [password, setPassword] = useState("");
@@ -48,9 +49,9 @@ const ResetPasswordPage = () => {
               A
             </div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-              Reset Password
+              Reset Your {BRAND.shortName} Password
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">Enter your new password below</p>
+            <p className="mt-2 text-sm text-muted-foreground">{BRAND.tagline}</p>
           </div>
 
           {success ? (

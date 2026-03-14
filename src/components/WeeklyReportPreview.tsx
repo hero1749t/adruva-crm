@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { BRAND } from "@/lib/brand";
 
 const fmtINR = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
@@ -175,7 +176,7 @@ const PreviewContent = ({ profileName, profileId }: { profileName: string; profi
           <div className="rounded-t-2xl p-8" style={{ background: "linear-gradient(135deg,#0f172a,#1e293b)", border: "1px solid #1e3a5f", borderBottom: "none" }}>
             <div className="flex items-start justify-between">
               <div>
-                <p className="font-mono text-[11px] font-medium uppercase tracking-[2px]" style={{ color: "#60a5fa" }}>Adruvaa CRM</p>
+                <p className="font-mono text-[11px] font-medium uppercase tracking-[2px]" style={{ color: "#2D8CFF" }}>{BRAND.fullName}</p>
                 <h2 className="text-2xl font-bold mt-1" style={{ color: "#f1f5f9", letterSpacing: "-0.3px" }}>Weekly Report</h2>
               </div>
               <div className="rounded-lg px-3 py-2" style={{ background: "#60a5fa20", border: "1px solid #60a5fa30" }}>
@@ -270,7 +271,7 @@ const PreviewContent = ({ profileName, profileId }: { profileName: string; profi
 
           {/* Footer */}
           <div className="rounded-b-2xl px-8 py-5 text-center" style={{ background: "#0b1120", border: "1px solid #1e3a5f", borderTop: "none" }}>
-            <p className="font-mono text-[11px] tracking-wide" style={{ color: "#334155" }}>Adruvaa Digital Agency — Automated Weekly Report</p>
+            <p className="font-mono text-[11px] tracking-wide" style={{ color: "#64748b" }}>{BRAND.fullName} - Automated Weekly Report</p>
           </div>
 
         </div>

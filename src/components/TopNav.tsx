@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { useTheme } from "@/contexts/ThemeContext";
+import { BRAND } from "@/lib/brand";
 
 const roleBadgeVariant: Record<string, string> = {
   owner: "bg-destructive/15 text-destructive border border-destructive/20",
@@ -47,7 +48,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
         <div className="relative hidden sm:block sm:w-64 lg:w-80">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search leads, clients..."
+            placeholder="Search leads, clients, systems..."
             className="h-9 border-border/50 bg-secondary/30 pl-9 text-sm placeholder:text-muted-foreground/60 focus:bg-secondary/50 transition-colors"
           />
         </div>
@@ -75,6 +76,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           </div>
           <div className="hidden sm:block">
             <p className="text-sm font-medium leading-none text-foreground">{profile?.name || "User"}</p>
+            <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{BRAND.shortName} Workspace</p>
             <span className={`mt-0.5 inline-block rounded-md px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider ${roleBadgeVariant[profile?.role || "team"]}`}>
               {profile?.role || "team"}
             </span>

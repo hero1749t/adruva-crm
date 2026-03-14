@@ -27,6 +27,7 @@ import { DateRangeToggle, type DateRange } from "@/components/dashboard/DateRang
 import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
 import { TeamLeaderboard } from "@/components/dashboard/TeamLeaderboard";
 import { MyWorkCard } from "@/components/dashboard/MyWorkCard";
+import { BRAND } from "@/lib/brand";
 
 const CHART_COLORS = [
   "hsl(217, 91%, 60%)", "hsl(199, 89%, 48%)", "hsl(160, 84%, 39%)",
@@ -332,12 +333,12 @@ const DashboardPage = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
-            {isManager ? "Dashboard" : "My Dashboard"}
+            {isManager ? "Growth System Dashboard" : "My Growth Dashboard"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {isManager
-              ? `${dashboardLabel} metrics and activity`
-              : `Welcome back, ${profile?.name || "Team Member"}! Here's your work summary`}
+              ? `${dashboardLabel} metrics, client growth signals, and team activity`
+              : `Welcome back, ${profile?.name || "Team Member"}! ${BRAND.promise}`}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

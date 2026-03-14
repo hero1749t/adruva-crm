@@ -175,7 +175,7 @@ export function PaymentGatewaySettings() {
   };
 
   const generateQrUrl = (vpa: string) => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=${encodeURIComponent(vpa)}&pn=ADRUVA%20CRM`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=${encodeURIComponent(vpa)}&pn=ADRUVA%20SOLUTION`;
   };
 
   const openConfigDialog = (gatewayId: string) => {

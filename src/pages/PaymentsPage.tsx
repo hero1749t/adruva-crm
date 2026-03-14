@@ -12,7 +12,7 @@ const PaymentsPage = () => {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Payments</h1>
-        <p className="text-sm text-muted-foreground">Manage payment gateways and invoices in one place</p>
+        <p className="text-sm text-muted-foreground">Manage billing systems, invoice collection, and payment gateways in one place</p>
       </div>
 
       <Tabs defaultValue="invoices" className="space-y-4">

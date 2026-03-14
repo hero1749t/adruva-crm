@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { BRAND } from "@/lib/brand";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -64,11 +65,12 @@ const LoginPage = () => {
               A
             </div>
             <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-              ADRUVA <span className="gradient-text">CRM</span>
+              {BRAND.shortName} <span className="gradient-text">Solution</span>
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              {forgotMode ? "Reset your password" : "Sign in to your account"}
+              {forgotMode ? "Reset your password" : BRAND.tagline}
             </p>
+            {!forgotMode && <p className="mt-2 text-xs text-muted-foreground/80">{BRAND.promise}</p>}
           </div>
 
           {forgotMode ? (
@@ -96,7 +98,7 @@ const LoginPage = () => {
                   </label>
                   <Input
                     type="email"
-                    placeholder="you@adruva.com"
+                    placeholder="you@adruvasolution.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="h-11 border-glass-border bg-secondary/50 focus:border-primary/50 transition-colors"
@@ -124,7 +126,7 @@ const LoginPage = () => {
                 </label>
                 <Input
                   type="email"
-                  placeholder="you@adruva.com"
+                  placeholder="you@adruvasolution.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-11 border-glass-border bg-secondary/50 focus:border-primary/50 transition-colors"
@@ -171,7 +173,7 @@ const LoginPage = () => {
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground/50">
-          Powered by ADRUVA · Secure Authentication
+          {BRAND.fullName} - Secure Authentication
         </p>
       </div>
     </div>
