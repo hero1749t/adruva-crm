@@ -373,10 +373,18 @@ const TeamPage = () => {
       if (formData.customRoleId) {
         const { error: customRoleError } = await supabase
           .from("profiles")
-          .update({ custom_role_id: formData.customRoleId })
+          .update({ custom_role_id: formData.customRoleId, can_view_unassigned: false })
           .eq("id", userId as string);
         if (customRoleError) {
           throw new Error(customRoleError.message);
+        }
+      } else {
+        const { error: visibilityError } = await supabase
+          .from("profiles")
+          .update({ can_view_unassigned: false })
+          .eq("id", userId as string);
+        if (visibilityError) {
+          throw new Error(visibilityError.message);
         }
       }
       return { userId, name: parsed.data.name, role: parsed.data.role, email: parsed.data.email };
@@ -450,6 +458,23 @@ const TeamPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team"] });
       toast({ title: "Permission role updated" });
+    },
+    onError: (err: Error) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+  });
+
+  const updateAssignmentView = useMutation({
+    mutationFn: async ({ userId, canViewUnassigned }: { userId: string; canViewUnassigned: boolean }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ can_view_unassigned: canViewUnassigned })
+        .eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["team"] });
+      toast({
+        title: variables.canViewUnassigned ? "Assigned + unassigned enabled" : "Assigned-only view enabled",
+      });
     },
     onError: (err: Error) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
   });
@@ -547,6 +572,7 @@ const TeamPage = () => {
                   <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Name</th>
                   <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">System Role</th>
                   <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Permission Role</th>
+                  <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Data View</th>
                   <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Status</th>
                   <th className="px-4 py-3 text-right font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Actions</th>
                 </tr>
@@ -555,7 +581,7 @@ const TeamPage = () => {
                 {isLoading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <tr key={i} className="border-b border-border/50">
-                      {Array.from({ length: 5 }).map((_, j) => (
+                      {Array.from({ length: 6 }).map((_, j) => (
                         <td key={j} className="px-4 py-3"><div className="h-4 w-24 animate-pulse rounded bg-muted" /></td>
                       ))}
                     </tr>
@@ -609,6 +635,31 @@ const TeamPage = () => {
                             </Select>
                           ) : (
                             <span className="text-xs text-muted-foreground">{customRoleName || "—"}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isOwner ? (
+                            <span className="text-xs text-muted-foreground">All data</span>
+                          ) : profile?.role === "owner" ? (
+                            <Select
+                              value={member.can_view_unassigned ? "own_or_unassigned" : "own_only"}
+                              onValueChange={(value) =>
+                                updateAssignmentView.mutate({
+                                  userId: member.id,
+                                  canViewUnassigned: value === "own_or_unassigned",
+                                })
+                              }
+                            >
+                              <SelectTrigger className="h-8 w-44 border-border bg-muted/30 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="own_only">Assigned only</SelectItem>
+                                <SelectItem value="own_or_unassigned">Assigned + Unassigned</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              {member.can_view_unassigned ? "Assigned + Unassigned" : "Assigned only"}
+                            </span>
                           )}
                         </td>
                         <td className="px-4 py-3">
