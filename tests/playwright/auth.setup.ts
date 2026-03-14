@@ -6,8 +6,8 @@ const ownerPassword = "Adruva@2026#Owner";
 test("authenticate owner session", async ({ page }) => {
   await page.goto("/login");
 
-  await expect(page.getByRole("heading", { name: /adruva crm/i })).toBeVisible();
-  await page.getByPlaceholder("you@adruva.com").fill(ownerEmail);
+  await expect(page.getByRole("heading", { name: /adruva solution/i })).toBeVisible();
+  await page.getByPlaceholder("you@adruvasolution.com").fill(ownerEmail);
   await page.locator('input[type="password"]').fill(ownerPassword);
   await page.getByRole("button", { name: /sign in/i }).click();
 

@@ -17,6 +17,7 @@ import { useCustomFieldDefs, useCustomFieldValues } from "@/hooks/useCustomField
 import { getAssignmentVisibilityMode } from "@/lib/assignment-visibility";
 
 const clientStatusConfig: Record<string, { label: string; color: string }> = {
+  new: { label: "New", color: "bg-primary/15 text-primary" },
   active: { label: "Active", color: "bg-success/20 text-success" },
   paused: { label: "Paused", color: "bg-warning/20 text-warning" },
   completed: { label: "Completed", color: "bg-muted text-muted-foreground" },
@@ -199,7 +200,8 @@ const ClientsPage = () => {
               </tr>
             ) : (
               filteredClients.map((client) => {
-                const statusConf = clientStatusConfig[client.status || "active"];
+                const statusKey = client.status || "new";
+                const statusConf = clientStatusConfig[statusKey] || clientStatusConfig.new;
                 const managerName = (client as any).profiles?.name || "—";
                 const health = healthScores?.[client.id];
                 return (
@@ -217,7 +219,7 @@ const ClientsPage = () => {
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       {isOwnerOrAdmin ? (
                         <Select
-                          value={client.status || "active"}
+                          value={statusKey}
                           onValueChange={(v) => {
                             supabase.from("clients").update({ status: v as any }).eq("id", client.id).then(() => {
                               queryClient.invalidateQueries({ queryKey: ["clients"] });
