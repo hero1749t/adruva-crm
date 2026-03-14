@@ -7,16 +7,11 @@ const CSV_HEADERS = [
   "email",
   "phone",
   "company_name",
-  "budget",
   "status",
   "notes",
 ] as const;
 
 const REQUIRED_FIELDS = ["name", "email", "phone"] as const;
-
-const BUDGET_MAP: Record<string, string> = {
-  "5k_10k": "5k_10k", "10k_25k": "10k_25k", "25k_50k": "25k_50k", "50k_1l": "50k_1l", "1l_plus": "1l_plus",
-};
 
 const STATUS_MAP: Record<string, string> = {
   "new_lead": "new_lead", "new lead": "new_lead",
@@ -220,7 +215,6 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
       email: normalizedEmail,
       phone: normalizedPhone,
       company_name: row.company_name?.trim() || null,
-      budget: mapEnum(row.budget, BUDGET_MAP),
       status: mapEnum(row.status, STATUS_MAP) || "new_lead",
       notes: row.notes?.trim() || null,
     });
@@ -356,7 +350,6 @@ export async function downloadCsvTemplate() {
     email: "john@example.com",
     phone: "+1234567890",
     company_name: "Acme Corp",
-    budget: "10k_25k",
     status: "new_lead",
     notes: "Initial contact",
   };
