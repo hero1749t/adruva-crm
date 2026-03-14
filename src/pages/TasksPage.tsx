@@ -423,12 +423,15 @@ const TasksPage = () => {
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <Select
                         value={task.priority || "medium"}
-                        onValueChange={(v) => {
+                        onValueChange={async (v) => {
                           const oldPriority = task.priority || "medium";
-                          supabase.from("tasks").update({ priority: v as any }).eq("id", task.id).then(() => {
-                            queryClient.invalidateQueries({ queryKey: ["tasks"] });
-                            logActivity({ entity: "task", entityId: task.id, action: "priority_changed", metadata: { title: task.task_title, from: oldPriority, to: v } });
-                          });
+                          const { error } = await supabase.from("tasks").update({ priority: v as any }).eq("id", task.id);
+                          if (error) {
+                            toast({ title: "Priority update failed", description: error.message, variant: "destructive" });
+                            return;
+                          }
+                          queryClient.invalidateQueries({ queryKey: ["tasks"] });
+                          logActivity({ entity: "task", entityId: task.id, action: "priority_changed", metadata: { title: task.task_title, from: oldPriority, to: v } });
                         }}
                       >
                         <SelectTrigger className={`h-7 w-[100px] border-none px-2.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider ${priorityConf.color}`}>
@@ -442,15 +445,18 @@ const TasksPage = () => {
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <Select
                         value={task.status || "pending"}
-                        onValueChange={(v) => {
+                        onValueChange={async (v) => {
                           const updates: any = { status: v };
                           if (v === "completed") updates.completed_at = new Date().toISOString();
                           const oldStatus = task.status || "pending";
-                          supabase.from("tasks").update(updates).eq("id", task.id).then(() => {
-                            queryClient.invalidateQueries({ queryKey: ["tasks"] });
-                            logActivity({ entity: "task", entityId: task.id, action: "status_changed", metadata: { title: task.task_title, from: oldStatus, to: v } });
-                            sendStatusEmail({ entity: "task", entityName: task.task_title, oldStatus, newStatus: v, assignedTo: task.assigned_to });
-                          });
+                          const { error } = await supabase.from("tasks").update(updates).eq("id", task.id);
+                          if (error) {
+                            toast({ title: "Status update failed", description: error.message, variant: "destructive" });
+                            return;
+                          }
+                          queryClient.invalidateQueries({ queryKey: ["tasks"] });
+                          logActivity({ entity: "task", entityId: task.id, action: "status_changed", metadata: { title: task.task_title, from: oldStatus, to: v } });
+                          sendStatusEmail({ entity: "task", entityName: task.task_title, oldStatus, newStatus: v, assignedTo: task.assigned_to });
                         }}
                       >
                         <SelectTrigger className={`h-7 w-[120px] border-none px-2.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider ${statusConf.color}`}>
@@ -465,25 +471,28 @@ const TasksPage = () => {
                       {isOwnerOrAdmin ? (
                         <Select
                           value={task.assigned_to || "unassigned"}
-                          onValueChange={(v) => {
+                          onValueChange={async (v) => {
                             const newAssignedTo = v === "unassigned" ? null : v;
                             const oldName = (task as any).profiles?.name || "Unassigned";
                             const newName = v === "unassigned" ? "Unassigned" : teamMembers.find((m) => m.id === v)?.name || "Unknown";
-                            supabase.from("tasks").update({ assigned_to: newAssignedTo }).eq("id", task.id).then(() => {
-                              queryClient.invalidateQueries({ queryKey: ["tasks"] });
-                              logActivity({ entity: "task", entityId: task.id, action: "assigned", metadata: { title: task.task_title, from: oldName, to: newName } });
-                              if (newAssignedTo) {
-                                notifyTaskAssignmentInApp({
-                                  taskId: task.id,
-                                  taskTitle: task.task_title,
-                                  assignedToId: newAssignedTo,
-                                  assignedToName: newName,
-                                  clientName: (task as any).clients?.client_name,
-                                });
-                                notifyTaskAssigned({ taskTitle: task.task_title, assignedToId: newAssignedTo, assignedToName: newName, clientName: (task as any).clients?.client_name, deadline: task.deadline });
-                              }
-                              queryClient.invalidateQueries({ queryKey: ["notifications"] });
-                            });
+                            const { error } = await supabase.from("tasks").update({ assigned_to: newAssignedTo }).eq("id", task.id);
+                            if (error) {
+                              toast({ title: "Assignment update failed", description: error.message, variant: "destructive" });
+                              return;
+                            }
+                            queryClient.invalidateQueries({ queryKey: ["tasks"] });
+                            logActivity({ entity: "task", entityId: task.id, action: "assigned", metadata: { title: task.task_title, from: oldName, to: newName } });
+                            if (newAssignedTo) {
+                              notifyTaskAssignmentInApp({
+                                taskId: task.id,
+                                taskTitle: task.task_title,
+                                assignedToId: newAssignedTo,
+                                assignedToName: newName,
+                                clientName: (task as any).clients?.client_name,
+                              });
+                              notifyTaskAssigned({ taskTitle: task.task_title, assignedToId: newAssignedTo, assignedToName: newName, clientName: (task as any).clients?.client_name, deadline: task.deadline });
+                            }
+                            queryClient.invalidateQueries({ queryKey: ["notifications"] });
                           }}
                         >
                           <SelectTrigger className="h-7 w-[140px] border-none px-2 py-0.5 text-xs text-muted-foreground">

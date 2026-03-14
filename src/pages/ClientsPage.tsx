@@ -15,6 +15,7 @@ import { useClientHealthScores } from "@/hooks/useClientHealthScore";
 import HealthScoreBadge from "@/components/HealthScoreBadge";
 import { useCustomFieldDefs, useCustomFieldValues } from "@/hooks/useCustomFields";
 import { getAssignmentVisibilityMode } from "@/lib/assignment-visibility";
+import { useToast } from "@/hooks/use-toast";
 
 const clientStatusConfig: Record<string, { label: string; color: string }> = {
   new: { label: "New", color: "bg-primary/15 text-primary" },
@@ -34,6 +35,7 @@ const ClientsPage = () => {
   const [showNewClient, setShowNewClient] = useState(false);
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
   const visibilityMode = getAssignmentVisibilityMode(profile);
 
@@ -220,11 +222,14 @@ const ClientsPage = () => {
                       {isOwnerOrAdmin ? (
                         <Select
                           value={statusKey}
-                          onValueChange={(v) => {
-                            supabase.from("clients").update({ status: v as any }).eq("id", client.id).then(() => {
-                              queryClient.invalidateQueries({ queryKey: ["clients"] });
-                              logActivity({ entity: "client", entityId: client.id, action: "status_changed", metadata: { name: client.client_name, from: client.status, to: v } });
-                            });
+                          onValueChange={async (v) => {
+                            const { error } = await supabase.from("clients").update({ status: v as any }).eq("id", client.id);
+                            if (error) {
+                              toast({ title: "Client update failed", description: error.message, variant: "destructive" });
+                              return;
+                            }
+                            queryClient.invalidateQueries({ queryKey: ["clients"] });
+                            logActivity({ entity: "client", entityId: client.id, action: "status_changed", metadata: { name: client.client_name, from: client.status, to: v } });
                           }}
                         >
                           <SelectTrigger className={`h-7 w-[110px] border-none px-2.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider ${statusConf.color}`}>

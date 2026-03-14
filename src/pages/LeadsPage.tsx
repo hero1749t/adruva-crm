@@ -553,13 +553,16 @@ const LeadsPage = () => {
                       {canManageLead ? (
                         <Select
                           value={lead.status}
-                          onValueChange={(v) => {
+                          onValueChange={async (v) => {
                             const oldStatus = lead.status;
-                            supabase.from("leads").update({ status: v as any }).eq("id", lead.id).then(() => {
-                              invalidateLeadRelatedQueries(queryClient);
-                              logActivity({ entity: "lead", entityId: lead.id, action: "status_changed", metadata: { name: lead.name, from: oldStatus, to: v } });
-                              sendStatusEmail({ entity: "lead", entityName: lead.name, oldStatus, newStatus: v, assignedTo: lead.assigned_to });
-                            });
+                            const { error } = await supabase.from("leads").update({ status: v as any }).eq("id", lead.id);
+                            if (error) {
+                              toast({ title: "Status update failed", description: error.message, variant: "destructive" });
+                              return;
+                            }
+                            invalidateLeadRelatedQueries(queryClient);
+                            logActivity({ entity: "lead", entityId: lead.id, action: "status_changed", metadata: { name: lead.name, from: oldStatus, to: v } });
+                            sendStatusEmail({ entity: "lead", entityName: lead.name, oldStatus, newStatus: v, assignedTo: lead.assigned_to });
                           }}
                         >
                           <SelectTrigger className={`h-7 w-[130px] border-none px-2.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider ${statusConf.color}`}>
@@ -584,9 +587,9 @@ const LeadsPage = () => {
                         <CustomFieldTableCell
                           entityType="lead"
                           entityId={lead.id}
-                          fieldDef={def}
-                          value={customFieldValuesRaw[lead.id]?.[def.id]}
-                          displayValue={customFieldValues[lead.id]?.[def.id]}
+                          definition={def}
+                          rawValue={customFieldValuesRaw[lead.id]?.[def.id]}
+                          editable={canManageLead}
                         />
                       </td>
                     ))}
