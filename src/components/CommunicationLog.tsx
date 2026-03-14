@@ -61,16 +61,21 @@ export const CommunicationLog = ({ entityType, entityId }: CommunicationLogProps
     mutationFn: async () => {
       const trimmed = content.trim();
       if (!trimmed) return;
-      const { error } = await supabase.from("communication_logs").insert({
+      const payload: Record<string, unknown> = {
         entity_type: entityType,
         entity_id: entityId,
         type,
         direction,
         subject: subject.trim() || null,
         content: trimmed,
-        duration_minutes: duration ? parseInt(duration) || null : null,
         created_by: profile?.id,
-      });
+      };
+
+      if (type === "call" || type === "meeting") {
+        payload.duration_minutes = duration ? parseInt(duration, 10) || null : null;
+      }
+
+      const { error } = await supabase.from("communication_logs").insert(payload as any);
       if (error) throw error;
     },
     onSuccess: () => {
