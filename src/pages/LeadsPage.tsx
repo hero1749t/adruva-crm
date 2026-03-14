@@ -37,7 +37,6 @@ import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useCustomFieldDefs, useCustomFieldValues, useCustomFieldValuesRaw } from "@/hooks/useCustomFields";
 import { getAssignmentVisibilityMode } from "@/lib/assignment-visibility";
-import { useEntityPropertyOptions } from "@/lib/property-options";
 import { InlineEditableCell } from "@/components/InlineEditableCell";
 import { CustomFieldTableCell } from "@/components/CustomFieldTableCell";
 
@@ -96,7 +95,6 @@ const LeadsPage = () => {
   const canDeleteLeads = can("leads", "delete");
   const showAssignedFilter = isOwner;
   const visibilityMode = getAssignmentVisibilityMode(profile);
-  const { sourceOptions, businessTypeOptions } = useEntityPropertyOptions("lead");
 
   const { data, isLoading } = useQuery({
     queryKey: ["leads", statusFilter, debouncedSearch, assignedFilter, dateFilter, page],
@@ -490,8 +488,6 @@ const LeadsPage = () => {
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Phone</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Status</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Assigned To</th>
-              <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Source</th>
-              <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Business Type</th>
               <th className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">Created</th>
               {customFieldDefs.map((def) => (
                 <th key={def.id} className="px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-primary">{def.label}</th>
@@ -502,14 +498,14 @@ const LeadsPage = () => {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-border/50">
-                  {Array.from({ length: isOwnerOrAdmin ? 9 : 8 }).map((_, j) => (
+                  {Array.from({ length: (isOwnerOrAdmin ? 8 : 7) + customFieldDefs.length }).map((_, j) => (
                     <td key={j} className="px-4 py-3"><div className="h-4 w-24 animate-pulse rounded bg-muted" /></td>
                   ))}
                 </tr>
               ))
             ) : leads.length === 0 ? (
               <tr>
-                <td colSpan={isOwnerOrAdmin ? 9 : 8} className="px-4 py-12 text-center text-muted-foreground">No leads found</td>
+                <td colSpan={(isOwnerOrAdmin ? 8 : 7) + customFieldDefs.length} className="px-4 py-12 text-center text-muted-foreground">No leads found</td>
               </tr>
             ) : (
               leads.map((lead) => {
@@ -582,11 +578,16 @@ const LeadsPage = () => {
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{assignedName}</td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">{lead.source?.replace("_", " ") || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : "—"}</td>
                     {customFieldDefs.map((def) => (
-                      <td key={def.id} className="px-4 py-3 text-muted-foreground">
-                        {(() => { const v = customFieldValues[lead.id]?.[def.id]; return (typeof v === "object" && v !== null ? JSON.stringify(v) : v) || "—"; })()}
+                      <td key={def.id} className="px-4 py-3 text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                        <CustomFieldTableCell
+                          entityType="lead"
+                          entityId={lead.id}
+                          fieldDef={def}
+                          value={customFieldValuesRaw[lead.id]?.[def.id]}
+                          displayValue={customFieldValues[lead.id]?.[def.id]}
+                        />
                       </td>
                     ))}
                   </tr>

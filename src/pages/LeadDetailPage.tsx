@@ -10,8 +10,6 @@ import { executeAutomationRules } from "@/lib/automation-engine";
 import { sendStatusEmail } from "@/lib/send-status-email";
 import { CommunicationLog } from "@/components/CommunicationLog";
 import { CustomFieldsSection } from "@/components/CustomFieldsSection";
-import { PropertyMultiSelect } from "@/components/PropertyMultiSelect";
-import { getPropertyOptionLabels, useEntityPropertyOptions } from "@/lib/property-options";
 import {
   ArrowLeft, Phone, Mail, Building2, Globe, StickyNote,
   Check, X, Pencil, MessageSquare, Calendar, FileText, Send, Loader2, Trash2,
@@ -68,7 +66,6 @@ const LeadDetailPage = () => {
   const isOwnerOrAdmin = profile?.role === "owner" || profile?.role === "admin";
   const isOwner = profile?.role === "owner";
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const { sourceOptions, businessTypeOptions, serviceInterestOptions } = useEntityPropertyOptions("lead");
 
   // Inline edit state
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -425,69 +422,11 @@ const LeadDetailPage = () => {
 
           <div className="rounded-xl border border-border bg-card p-4">
             <h2 className="mb-3 font-mono text-[10px] font-medium uppercase tracking-widest text-primary">
-              Lead Attributes
+              Lead Custom Fields
             </h2>
-            <div className="space-y-3">
-              <div>
-                <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                  Source
-                </p>
-                <Select
-                  value={lead.source || ""}
-                  onValueChange={(value) => updateLead.mutate({ source: value || null })}
-                  disabled={!canManageLead}
-                >
-                  <SelectTrigger className="h-9 border-border bg-muted/30 text-sm">
-                    <SelectValue placeholder="Select source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sourceOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                  Business Type
-                </p>
-                <Select
-                  value={lead.business_type || ""}
-                  onValueChange={(value) => updateLead.mutate({ business_type: value || null })}
-                  disabled={!canManageLead}
-                >
-                  <SelectTrigger className="h-9 border-border bg-muted/30 text-sm">
-                    <SelectValue placeholder="Select business type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {businessTypeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                  Service Interest
-                </p>
-                <PropertyMultiSelect
-                  options={serviceInterestOptions}
-                  value={lead.service_interest || []}
-                  onChange={(value) => updateLead.mutate({ service_interest: value.length ? value : null })}
-                  placeholder="Select interested services"
-                  disabled={!canManageLead}
-                />
-                {!!lead.service_interest?.length && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {getPropertyOptionLabels(serviceInterestOptions, lead.service_interest).join(", ")}
-                  </p>
-                )}
-              </div>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Source, business type, and service interest are now managed from custom fields only.
+            </p>
           </div>
 
           {/* Notes Card */}

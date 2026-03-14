@@ -7,9 +7,6 @@ const CSV_HEADERS = [
   "email",
   "phone",
   "company_name",
-  "source",
-  "service_interest",
-  "business_type",
   "budget",
   "status",
   "notes",
@@ -28,23 +25,6 @@ const STATUS_MAP: Record<string, string> = {
   "in_progress": "in_progress", "in progress": "in_progress",
   "lead_won": "lead_won", "lead won": "lead_won",
   "lead_lost": "lead_lost", "lead lost": "lead_lost",
-};
-
-const SOURCE_MAP: Record<string, string> = {
-  "website_form": "website_form", "website": "website_form",
-  "whatsapp": "whatsapp",
-  "facebook_ads": "facebook_ads", "facebook": "facebook_ads",
-  "google_ads": "google_ads", "google ads": "google_ads",
-  "instagram": "instagram",
-  "referral": "referral",
-  "cold_call": "cold_call", "cold call": "cold_call",
-  "manual_entry": "manual_entry", "manual entry": "manual_entry",
-};
-
-const BUSINESS_TYPE_MAP: Record<string, string> = {
-  "restaurant": "restaurant", "clinic": "clinic", "real_estate": "real_estate", "real estate": "real_estate",
-  "ecommerce": "ecommerce", "education": "education", "gym_fitness": "gym_fitness", "gym": "gym_fitness",
-  "salon": "salon", "local_shop": "local_shop", "local shop": "local_shop", "corporate": "corporate", "other": "other",
 };
 
 function mapEnum(value: string | undefined, map: Record<string, string>): string | null {
@@ -90,19 +70,39 @@ function parseCsvLine(line: string): string[] {
   return fields;
 }
 
+function uniqueFieldKeys(headers: string[]) {
+  return headers.filter((header, index) => headers.indexOf(header) === index);
+}
+
+function getCustomFieldSampleValue(fieldKey: string) {
+  switch (fieldKey) {
+    case "source":
+      return "google";
+    case "service_interest":
+      return "seo;google_ads_management";
+    case "business_type":
+      return "restaurant";
+    default:
+      return "";
+  }
+}
+
 export function exportLeadsCsv(
   leads: any[],
   customFieldDefs: CustomFieldDef[] = [],
   customFieldValues: Record<string, Record<string, string>> = {}
 ) {
-  const allHeaders = [...CSV_HEADERS, ...customFieldDefs.map((d) => d.field_key)];
+  const allHeaders = uniqueFieldKeys([...CSV_HEADERS, ...customFieldDefs.map((d) => d.field_key)]);
   const headerRow = allHeaders.map((h) => escapeCsvField(h)).join(",");
   const rows = leads.map((lead) => {
-    const baseCols = CSV_HEADERS.map((h) => escapeCsvField(String(lead[h] ?? "")));
-    const customCols = customFieldDefs.map((def) =>
-      escapeCsvField(customFieldValues[lead.id]?.[def.id] || "")
-    );
-    return [...baseCols, ...customCols].join(",");
+    const row = allHeaders.map((header) => {
+      const matchingDef = customFieldDefs.find((def) => def.field_key === header);
+      if (matchingDef) {
+        return escapeCsvField(customFieldValues[lead.id]?.[matchingDef.id] || "");
+      }
+      return escapeCsvField(String(lead[header] ?? ""));
+    });
+    return row.join(",");
   });
   const csv = [headerRow, ...rows].join("\n");
 
@@ -186,6 +186,8 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
   const result: ImportResult = { success: 0, errors: [] };
   const validLeads: Record<string, any>[] = [];
   const customValuesPerLead: Record<string, string>[][] = [];
+  const seenEmails = new Set<string>();
+  const seenPhones = new Set<string>();
 
   for (let i = 1; i < lines.length; i++) {
     const values = parseCsvLine(lines[i]);
@@ -199,19 +201,25 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
     if (!row.email?.trim()) rowErrors.push("email is required");
     if (!row.phone?.trim()) rowErrors.push("phone is required");
 
+    const normalizedEmail = row.email.trim().toLowerCase();
+    const normalizedPhone = row.phone.trim();
+
+    if (seenEmails.has(normalizedEmail)) rowErrors.push("duplicate email in CSV");
+    if (seenPhones.has(normalizedPhone)) rowErrors.push("duplicate phone in CSV");
+
     if (rowErrors.length > 0) {
       result.errors.push({ row: i + 1, message: rowErrors.join("; ") });
       continue;
     }
 
+    seenEmails.add(normalizedEmail);
+    seenPhones.add(normalizedPhone);
+
     validLeads.push({
       name: row.name.trim(),
-      email: row.email.trim(),
-      phone: row.phone.trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
       company_name: row.company_name?.trim() || null,
-      source: mapEnum(row.source, SOURCE_MAP),
-      service_interest: row.service_interest?.trim() ? row.service_interest.trim().split(";").map(s => s.trim()) : null,
-      business_type: mapEnum(row.business_type, BUSINESS_TYPE_MAP),
       budget: mapEnum(row.budget, BUDGET_MAP),
       status: mapEnum(row.status, STATUS_MAP) || "new_lead",
       notes: row.notes?.trim() || null,
@@ -228,13 +236,71 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
     customValuesPerLead.push(cfValues);
   }
 
+  if (validLeads.length === 0) {
+    return result;
+  }
+
+  const existingEmails = Array.from(new Set(validLeads.map((lead) => lead.email).filter(Boolean)));
+  const existingPhones = Array.from(new Set(validLeads.map((lead) => lead.phone).filter(Boolean)));
+  const existingLeadLookup = new Set<string>();
+
+  if (existingEmails.length > 0 || existingPhones.length > 0) {
+    let existingQuery = supabase.from("leads").select("email, phone").eq("is_deleted", false);
+    const filters: string[] = [];
+    if (existingEmails.length > 0) {
+      filters.push(...existingEmails.map((email) => `email.eq.${email}`));
+    }
+    if (existingPhones.length > 0) {
+      filters.push(...existingPhones.map((phone) => `phone.eq.${phone}`));
+    }
+    if (filters.length > 0) {
+      existingQuery = existingQuery.or(filters.join(","));
+    }
+
+    const { data: existingLeads, error: existingError } = await existingQuery;
+    if (existingError) throw existingError;
+
+    for (const lead of existingLeads || []) {
+      if (lead.email) existingLeadLookup.add(`email:${lead.email.toLowerCase()}`);
+      if (lead.phone) existingLeadLookup.add(`phone:${lead.phone}`);
+    }
+  }
+
+  const filteredLeads: Record<string, any>[] = [];
+  const filteredCustomValues: Record<string, string>[][] = [];
+
+  validLeads.forEach((lead, index) => {
+    const duplicateReasons: string[] = [];
+    if (lead.email && existingLeadLookup.has(`email:${lead.email.toLowerCase()}`)) {
+      duplicateReasons.push("email already exists");
+    }
+    if (lead.phone && existingLeadLookup.has(`phone:${lead.phone}`)) {
+      duplicateReasons.push("phone already exists");
+    }
+
+    if (duplicateReasons.length > 0) {
+      result.errors.push({
+        row: index + 2,
+        message: `duplicate skipped: ${duplicateReasons.join(", ")}`,
+      });
+      return;
+    }
+
+    filteredLeads.push(lead);
+    filteredCustomValues.push(customValuesPerLead[index] || []);
+  });
+
+  if (filteredLeads.length === 0) {
+    return result;
+  }
+
   // Batch insert in chunks of 50
   const CHUNK_SIZE = 50;
-  for (let i = 0; i < validLeads.length; i += CHUNK_SIZE) {
-    const chunk = validLeads.slice(i, i + CHUNK_SIZE);
+  for (let i = 0; i < filteredLeads.length; i += CHUNK_SIZE) {
+    const chunk = filteredLeads.slice(i, i + CHUNK_SIZE);
     const { data: inserted, error } = await supabase
       .from("leads")
-      .upsert(chunk as any, { onConflict: "email", ignoreDuplicates: true })
+      .insert(chunk as any)
       .select("id");
     if (error) {
       result.errors.push({
@@ -249,7 +315,7 @@ export async function importLeadsCsv(file: File): Promise<ImportResult> {
         const cfInserts: any[] = [];
         for (let j = 0; j < inserted.length; j++) {
           const leadIdx = i + j;
-          const cfValues = customValuesPerLead[leadIdx] || [];
+          const cfValues = filteredCustomValues[leadIdx] || [];
           for (const cf of cfValues) {
             cfInserts.push({
               entity_type: "lead",
@@ -284,8 +350,17 @@ export async function downloadCsvTemplate() {
     throw error;
   }
 
-  const allHeaders = [...CSV_HEADERS, ...(customDefs || []).map((d) => d.field_key)];
-  const sampleRow = ["John Doe", "john@example.com", "+1234567890", "Acme Corp", "google", "SEO;PPC", "restaurant", "10k_25k", "", "Initial contact", ...(customDefs || []).map(() => "")];
+  const allHeaders = uniqueFieldKeys([...CSV_HEADERS, ...(customDefs || []).map((d) => d.field_key)]);
+  const sampleValues: Record<string, string> = {
+    name: "John Doe",
+    email: "john@example.com",
+    phone: "+1234567890",
+    company_name: "Acme Corp",
+    budget: "10k_25k",
+    status: "new_lead",
+    notes: "Initial contact",
+  };
+  const sampleRow = allHeaders.map((header) => sampleValues[header] ?? getCustomFieldSampleValue(header));
   const csv = allHeaders.join(",") + "\n" + sampleRow.join(",");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
