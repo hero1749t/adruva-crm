@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Filter, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -25,6 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
 
@@ -64,6 +67,39 @@ const getNextInvoiceNumber = (invoices: any[]) => {
 
   return `${INVOICE_PREFIX}-${financialYearCode}-${String(maxSequence + 1).padStart(5, "0")}`;
 };
+
+function InvoiceDateField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const selectedDate = value ? new Date(`${value}T00:00:00`) : undefined;
+
+  return (
+    <div>
+      <label className="mb-1 block font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">{label}</label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="h-10 w-full justify-start border-border bg-background text-left font-normal">
+            {selectedDate ? format(selectedDate, "dd-MM-yyyy") : `Select ${label.toLowerCase()}`}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="z-[100] w-auto border-border bg-card p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(date) => onChange(date ? format(date, "yyyy-MM-dd") : "")}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 const InvoicesPage = () => {
   const { profile } = useAuth();
@@ -122,6 +158,15 @@ const InvoicesPage = () => {
     },
   });
 
+  const { data: invoiceNumberSeed = [] } = useQuery({
+    queryKey: ["invoice-number-seed"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("invoices").select("invoice_number");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const { data: templateAssignments = [] } = useQuery({
     queryKey: ["invoice-client-template-assignments"],
     queryFn: async () => {
@@ -138,7 +183,6 @@ const InvoicesPage = () => {
       const amount = parseFloat(formAmount) || 0;
       const tax = parseFloat(formTax) || 0;
       const { error } = await supabase.from("invoices").insert({
-        invoice_number: "",
         client_id: formClientId,
         amount,
         tax_amount: tax,
@@ -267,7 +311,7 @@ const InvoicesPage = () => {
       </div>
     );
   };
-  const nextInvoiceNumber = getNextInvoiceNumber(invoices);
+  const nextInvoiceNumber = getNextInvoiceNumber(invoiceNumberSeed);
 
   return (
     <div className="space-y-6">
@@ -350,10 +394,7 @@ const InvoicesPage = () => {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Due Date</label>
-                    <Input type="date" value={formDueDate} onChange={(e) => setFormDueDate(e.target.value)} />
-                  </div>
+                  <InvoiceDateField label="Due Date" value={formDueDate} onChange={setFormDueDate} />
                   <div>
                     <label className="mb-1 block font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Installment</label>
                     <Select value={formInstallmentType} onValueChange={setFormInstallmentType}>
@@ -366,14 +407,8 @@ const InvoicesPage = () => {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Period Start</label>
-                    <Input type="date" value={formPeriodStart} onChange={(e) => setFormPeriodStart(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="mb-1 block font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Period End</label>
-                    <Input type="date" value={formPeriodEnd} onChange={(e) => setFormPeriodEnd(e.target.value)} />
-                  </div>
+                  <InvoiceDateField label="Period Start" value={formPeriodStart} onChange={setFormPeriodStart} />
+                  <InvoiceDateField label="Period End" value={formPeriodEnd} onChange={setFormPeriodEnd} />
                 </div>
                 <div>
                   <label className="mb-1 block font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Notes</label>
@@ -480,6 +515,8 @@ const InvoicesPage = () => {
                             {statusStyle.label}
                           </span>
                         </div>
+                        <p className="mt-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Invoice ID</p>
+                        <p className="text-xs text-muted-foreground">{invoice.id}</p>
                         <p className="mt-2 text-xs text-muted-foreground">{invoice.notes || "No notes"}</p>
                       </td>
                       <td className="px-4 py-3">
