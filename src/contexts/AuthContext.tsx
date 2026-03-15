@@ -30,38 +30,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string, email?: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
 
-      if (data && !error) {
-        if (data.status === "inactive") {
-          await supabase.auth.signOut();
-          setUser(null);
-          setProfile(null);
-          return;
-        }
-        setProfile({ ...data, email, role: data.role as UserRole });
-      }
-    } catch {
-      // Profile fetch failed — continue without profile
+    if (error || !data) {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      throw new Error("Profile not found");
     }
+
+    if (data.status === "inactive") {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      throw new Error("Inactive account");
+    }
+
+    setProfile({ ...data, email, role: data.role as UserRole });
   };
 
   useEffect(() => {
-    // Set up auth listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Use setTimeout to avoid Supabase deadlock
           setTimeout(() => {
-            fetchProfile(session.user.id, session.user.email).finally(() => {
-              setLoading(false);
-            });
+            fetchProfile(session.user.id, session.user.email)
+              .catch(() => undefined)
+              .finally(() => {
+                setLoading(false);
+              });
           }, 0);
         } else {
           setProfile(null);
@@ -70,13 +72,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Then get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id, session.user.email).finally(() => {
-          setLoading(false);
-        });
+        fetchProfile(session.user.id, session.user.email)
+          .catch(() => undefined)
+          .finally(() => {
+            setLoading(false);
+          });
       } else {
         setLoading(false);
       }
@@ -91,7 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
 
-    // Check if user is deactivated
     if (data.user) {
       const { data: prof } = await supabase
         .from("profiles")

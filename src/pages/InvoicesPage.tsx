@@ -628,7 +628,7 @@ const InvoicesPage = () => {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {isOwnerOrAdmin ? (
+                        {(invoice.installment_type || "monthly") === "twice_a_month" && isOwnerOrAdmin ? (
                           <Input
                             type="date"
                             className="h-8 w-[145px]"
